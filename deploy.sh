@@ -17,7 +17,7 @@ docker run -d \
   --restart unless-stopped \
   -e PASSKEY="${PASSKEY:-change-me-please}" \
   -p 8080:3001 \
-  -v anan_data:/app/server \
+  -v anan_data:/app/data \
   "${IMAGE}"
 
 echo ">> 清理无用镜像"

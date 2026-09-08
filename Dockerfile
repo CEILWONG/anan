@@ -27,6 +27,8 @@ COPY server ./server
 ARG PASSKEY=''
 ENV PASSKEY=${PASSKEY}
 ENV PORT=3001
+# 数据文件放在独立目录 /app/data，挂载卷时挂这里，不会覆盖 /app/server 里的代码
+ENV DATA_FILE=/app/data/data.md
 
 EXPOSE 3001
 HEALTHCHECK --interval=30s --timeout=3s CMD wget -qO- http://127.0.0.1:3001/api/health || exit 1

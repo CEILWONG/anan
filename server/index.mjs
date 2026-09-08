@@ -13,7 +13,10 @@ import yaml from 'js-yaml'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
 const DIST_DIR = path.join(ROOT, 'dist')
-const DATA_FILE = path.join(__dirname, 'data.md')
+// 数据文件路径：可用环境变量 DATA_FILE 指定（容器里指向独立数据目录，避免挂载覆盖代码）
+const DATA_FILE = process.env.DATA_FILE
+  ? path.resolve(process.env.DATA_FILE)
+  : path.join(__dirname, 'data.md')
 
 // ---- 简易 .env 加载（仅 server/.env，已被进程环境变量覆盖） ----
 function loadDotEnv() {
@@ -36,6 +39,7 @@ const FRONTMATTER_REGEX = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/
 
 function ensureFile() {
   if (fs.existsSync(DATA_FILE)) return
+  fs.mkdirSync(path.dirname(DATA_FILE), { recursive: true })
   const initial = `---
 version: 0
 babies: []
@@ -79,6 +83,9 @@ function writeState(version, babies, records) {
 const app = express()
 app.use(express.json({ limit: '5mb' }))
 
+// 健康检查（不需要口令，供 Docker HEALTHCHECK / 负载均衡探测）
+app.get('/api/health', (req, res) => res.json({ ok: true }))
+
 // ---- 口令鉴权 ----
 app.use('/api', (req, res, next) => {
   if (!PASSKEY) return next() // 未配置口令 → 放行
@@ -113,8 +120,6 @@ app.put('/api/data', (req, res) => {
   writeState(newVersion, nextData.babies, nextData.records)
   res.json({ data: { babies: nextData.babies, records: nextData.records }, version: newVersion })
 })
-
-app.get('/api/health', (req, res) => res.json({ ok: true }))
 
 // ---- 生产：托管前端静态文件 ----
 if (fs.existsSync(DIST_DIR)) {
