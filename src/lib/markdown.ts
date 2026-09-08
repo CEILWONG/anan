@@ -64,8 +64,6 @@ function defaultTitle(record: AnyRecord): string {
   switch (record.type) {
     case 'feeding':
       return `喂养 · ${ymd} ${hm}`
-    case 'sleep':
-      return `睡眠 · ${ymd} ${hm}`
     case 'diaper':
       return `换尿布 · ${ymd} ${hm}`
     case 'milestone':

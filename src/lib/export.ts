@@ -53,8 +53,9 @@ export async function exportAllAsZip(): Promise<Blob> {
 ├── README.md            # 本文件
 ├── records/             # 所有记录（按类型分类）
 │   ├── feeding/         # 喂养记录
-│   ├── sleep/           # 睡眠记录
 │   ├── diaper/          # 换尿布
+│   ├── weight/          # 体重
+│   ├── jaundice/        # 黄疸
 │   └── milestone/       # 里程碑
 └── babies/              # 宝宝档案
 \`\`\`

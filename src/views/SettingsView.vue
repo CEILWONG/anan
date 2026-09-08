@@ -15,8 +15,6 @@ import {
 } from 'lucide-vue-next'
 import { dbApi } from '@/lib/db'
 import { useAuthStore } from '@/stores/auth'
-import { ROLE_LABELS } from '@/types'
-import type { UserRole } from '@/types'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -104,14 +102,6 @@ async function clearData() {
   showMessage('所有数据已清除')
 }
 
-const roleOptions: { value: UserRole; label: string; emoji: string }[] = [
-  { value: 'mom', label: '妈妈', emoji: '👩' },
-  { value: 'dad', label: '爸爸', emoji: '👨' },
-  { value: 'grandma', label: '奶奶/外婆', emoji: '👵' },
-  { value: 'grandpa', label: '爷爷/外公', emoji: '👴' },
-  { value: 'custom', label: '自定义', emoji: '🙂' }
-]
-
 const count = computed(() => ({
   babies: babyStore.babies.length,
   records: recordsStore.records.length
@@ -119,6 +109,7 @@ const count = computed(() => ({
 
 // 访问口令
 const passkeyInput = ref('')
+const passkeyOpen = ref(false)
 async function savePasskey() {
   if (!passkeyInput.value.trim()) return showMessage('请输入口令', 'error')
   const ok = await authStore.login(passkeyInput.value)
@@ -162,11 +153,11 @@ async function logout() {
         {{ message }}
       </div>
 
-      <!-- 我是谁 -->
+      <!-- 记录者 -->
       <div>
-        <h3 class="text-xs text-ink-400 mb-2 uppercase tracking-wide">我是谁</h3>
+        <h3 class="text-xs text-ink-400 mb-2 uppercase tracking-wide">记录者</h3>
         <div class="card">
-          <div class="flex items-center gap-3 mb-3">
+          <div class="flex items-center gap-3">
             <div class="w-12 h-12 bg-cream-200 rounded-2xl flex items-center justify-center text-2xl">
               {{ userStore.emoji }}
             </div>
@@ -183,7 +174,6 @@ async function logout() {
                 @keyup.enter="saveName"
               />
               <p class="text-xs text-ink-400 mt-0.5">
-                {{ ROLE_LABELS[userStore.user.role] }} ·
                 {{ count.babies }} 个宝宝 · {{ count.records }} 条记录
               </p>
             </div>
@@ -202,51 +192,37 @@ async function logout() {
               <Check class="w-4 h-4 text-sage-500" />
             </button>
           </div>
-
-          <label class="block text-xs text-ink-400 mb-2">角色</label>
-          <div class="grid grid-cols-5 gap-1.5">
-            <button
-              v-for="r in roleOptions"
-              :key="r.value"
-              @click="userStore.setRole(r.value)"
-              :class="[
-                'flex flex-col items-center gap-1 py-2 rounded-xl text-[11px] transition border',
-                userStore.user.role === r.value
-                  ? 'bg-apricot-50 border-apricot-300 text-apricot-500 font-medium'
-                  : 'bg-cream-50 border-cream-200 text-ink-500'
-              ]"
-            >
-              <span class="text-base">{{ r.emoji }}</span>
-              <span>{{ r.label }}</span>
-            </button>
-          </div>
         </div>
       </div>
 
-      <!-- 访问与共享 -->
+      <!-- 访问口令（可选） -->
       <div>
-        <h3 class="text-xs text-ink-400 mb-2 uppercase tracking-wide">访问与共享</h3>
+        <h3 class="text-xs text-ink-400 mb-2 uppercase tracking-wide">访问</h3>
         <div class="card space-y-3">
-          <p class="text-xs text-ink-400">数据存储在服务器上供所有使用者共享，设置访问口令可防止陌生人浏览。</p>
-          <div class="flex gap-2">
-            <input
-              v-model="passkeyInput"
-              type="password"
-              class="input flex-1 text-sm"
-              placeholder="新访问口令"
-              @keyup.enter="savePasskey"
-            />
-            <button @click="savePasskey" class="px-3 bg-apricot-400 text-white rounded-xl text-sm font-medium">
-              保存
-            </button>
-          </div>
-          <button @click="logout" class="text-xs text-dusk-400">
-            退出（清除本地口令，回到口令页）
+          <button @click="passkeyOpen = !passkeyOpen" class="text-sm text-ink-700 w-full text-left">
+            🔑 访问口令{{ passkeyOpen ? '（收起）' : '（展开）' }}
           </button>
+          <template v-if="passkeyOpen">
+            <div class="flex gap-2">
+              <input
+                v-model="passkeyInput"
+                type="password"
+                class="input flex-1 text-sm"
+                placeholder="新访问口令"
+                @keyup.enter="savePasskey"
+              />
+              <button @click="savePasskey" class="px-3 bg-apricot-400 text-white rounded-xl text-sm font-medium">
+                保存
+              </button>
+            </div>
+            <button @click="logout" class="text-xs text-dusk-400">
+              退出（清除本地口令，回到口令页）
+            </button>
+          </template>
         </div>
       </div>
 
-      <!-- 数据管理 -->
+      <!-- 数据备份 -->
       <div>
         <h3 class="text-xs text-ink-400 mb-2 uppercase tracking-wide">数据</h3>
         <div class="card space-y-2">
@@ -260,7 +236,7 @@ async function logout() {
             </div>
             <div class="flex-1">
               <p class="text-sm text-ink-700">备份全部数据</p>
-              <p class="text-xs text-ink-400">导出为 .zip（含 md 文件）</p>
+              <p class="text-xs text-ink-400">导出为 .zip</p>
             </div>
           </button>
 
@@ -269,8 +245,8 @@ async function logout() {
               <Upload class="w-4 h-4 text-apricot-500" />
             </div>
             <div class="flex-1">
-              <p class="text-sm text-ink-700">从 .zip 导入</p>
-              <p class="text-xs text-ink-400">{{ importing ? '导入中...' : '会覆盖当前数据' }}</p>
+              <p class="text-sm text-ink-700">导入备份数据</p>
+              <p class="text-xs text-ink-400">{{ importing ? '导入中...' : '从 .zip 恢复' }}</p>
             </div>
             <input
               type="file"
@@ -302,7 +278,7 @@ async function logout() {
 
       <!-- 关于 -->
       <div class="text-center text-xs text-ink-300 pt-8 pb-4 space-y-1">
-        <p>安安记 v0.2.0</p>
+        <p>安安记 v0.3.0</p>
         <p>用爱记录，温柔以待</p>
       </div>
     </div>

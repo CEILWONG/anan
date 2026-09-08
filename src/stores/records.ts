@@ -7,8 +7,9 @@ import { dayjs } from '@/lib/utils'
 import type {
   AnyRecord,
   FeedingRecord,
-  SleepRecord,
   DiaperRecord,
+  WeightRecord,
+  JaundiceRecord,
   MilestoneRecord
 } from '@/types'
 import { useBabyStore } from './baby'
@@ -38,21 +39,21 @@ export const useRecordsStore = defineStore('records', () => {
   const todaySummary = computed(() => {
     const babyStore = useBabyStore()
     const bid = babyStore.currentBabyId
-    if (!bid) {
-      return { feeding: 0, sleep: 0, diaper: 0, sleepMin: 0 }
-    }
+    if (!bid) return { feeding: 0, diaper: 0, weight: 0, jaundice: 0, feedCount: 0, milkMl: 0 }
     const today = dayjs().startOf('day').toISOString()
     const tomorrow = dayjs().endOf('day').toISOString()
     const todayRecords = records.value.filter(
       (r) => r.babyId === bid && r.datetime >= today && r.datetime <= tomorrow
     )
     const feeding = todayRecords.filter((r) => r.type === 'feeding').length
-    const sleep = todayRecords.filter((r) => r.type === 'sleep').length
     const diaper = todayRecords.filter((r) => r.type === 'diaper').length
-    const sleepMin = todayRecords
-      .filter((r) => r.type === 'sleep')
-      .reduce((acc, r) => acc + ((r as SleepRecord).durationMin || 0), 0)
-    return { feeding, sleep, diaper, sleepMin }
+    const weight = todayRecords.filter((r) => r.type === 'weight').length
+    const jaundice = todayRecords.filter((r) => r.type === 'jaundice').length
+    const feedCount = feeding
+    const milkMl = todayRecords
+      .filter((r) => r.type === 'feeding')
+      .reduce((acc, r) => acc + ((r as FeedingRecord).amountMl || 0), 0)
+    return { feeding, diaper, weight, jaundice, feedCount, milkMl }
   })
 
   // 最近的喂养
@@ -63,20 +64,6 @@ export const useRecordsStore = defineStore('records', () => {
     return (
       records.value
         .filter((r) => r.babyId === bid && r.type === 'feeding')
-        .sort((a, b) => b.datetime.localeCompare(a.datetime))[0] || null
-    )
-  })
-
-  // 进行中的睡眠
-  const ongoingSleep = computed(() => {
-    const babyStore = useBabyStore()
-    const bid = babyStore.currentBabyId
-    if (!bid) return null
-    return (
-      records.value
-        .filter(
-          (r) => r.babyId === bid && r.type === 'sleep' && !(r as SleepRecord).endTime
-        )
         .sort((a, b) => b.datetime.localeCompare(a.datetime))[0] || null
     )
   })
@@ -116,26 +103,20 @@ export const useRecordsStore = defineStore('records', () => {
   ) {
     return addRecord<FeedingRecord>({ ...opts, type: 'feeding' })
   }
-  async function addSleep(
-    opts: Omit<SleepRecord, 'id' | 'createdAt' | 'type' | 'author' | 'authorRole'>
-  ) {
-    return addRecord<SleepRecord>({ ...opts, type: 'sleep' })
-  }
-  async function endSleep(id: string, endTimeISO: string) {
-    const rec = records.value.find((r) => r.id === id)
-    if (!rec || rec.type !== 'sleep') return
-    const start = dayjs(rec.datetime)
-    const end = dayjs(endTimeISO)
-    const durationMin = Math.max(1, end.diff(start, 'minute'))
-    await updateRecord(id, {
-      endTime: endTimeISO,
-      durationMin
-    } as any)
-  }
   async function addDiaper(
     opts: Omit<DiaperRecord, 'id' | 'createdAt' | 'type' | 'author' | 'authorRole'>
   ) {
     return addRecord<DiaperRecord>({ ...opts, type: 'diaper' })
+  }
+  async function addWeight(
+    opts: Omit<WeightRecord, 'id' | 'createdAt' | 'type' | 'author' | 'authorRole'>
+  ) {
+    return addRecord<WeightRecord>({ ...opts, type: 'weight' })
+  }
+  async function addJaundice(
+    opts: Omit<JaundiceRecord, 'id' | 'createdAt' | 'type' | 'author' | 'authorRole'>
+  ) {
+    return addRecord<JaundiceRecord>({ ...opts, type: 'jaundice' })
   }
   async function addMilestone(
     opts: Omit<MilestoneRecord, 'id' | 'createdAt' | 'type' | 'author' | 'authorRole'>
@@ -148,16 +129,15 @@ export const useRecordsStore = defineStore('records', () => {
     loading,
     todaySummary,
     lastFeeding,
-    ongoingSleep,
     loadAll,
     forCurrentBaby,
     addRecord,
     updateRecord,
     deleteRecord,
     addFeeding,
-    addSleep,
-    endSleep,
     addDiaper,
+    addWeight,
+    addJaundice,
     addMilestone
   }
 })

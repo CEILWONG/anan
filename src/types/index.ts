@@ -1,11 +1,10 @@
 // 安安记 · 核心类型定义（无登录模式）
 
-export type RecordType = 'feeding' | 'sleep' | 'diaper' | 'milestone'
+export type RecordType = 'feeding' | 'diaper' | 'weight' | 'jaundice' | 'milestone'
 
-export type FeedingMethod = 'breast' | 'bottle' | 'solid'
+export type FeedingMethod = 'breast' | 'formula' | 'pumped_milk'
 export type BreastSide = 'left' | 'right' | 'both'
-export type DiaperType = 'wet' | 'dirty' | 'mixed' | 'dry'
-export type SleepQuality = 'good' | 'normal' | 'restless'
+export type DiaperType = 'wet' | 'dirty' | 'mixed'
 export type UserRole = 'mom' | 'dad' | 'grandma' | 'grandpa' | 'custom'
 
 // 当前使用者（谁在记录），存 localStorage，无登录
@@ -21,6 +20,7 @@ export interface Baby {
   fullName?: string
   gender: 'boy' | 'girl'
   birthday: string
+  avatar?: string // 头像图片相对 URL，如 /uploads/xxx.jpg
   avatarColor?: string
   cover?: string
   note?: string
@@ -44,22 +44,9 @@ export interface BaseRecord {
 export interface FeedingRecord extends BaseRecord {
   type: 'feeding'
   method: FeedingMethod
-  durationMin?: number
-  side?: BreastSide
-  amountMl?: number
-  foodName?: string
-  foodAmount?: string
-}
-
-// 睡眠记录
-export interface SleepRecord extends BaseRecord {
-  type: 'sleep'
-  startTime: string
-  endTime?: string
-  durationMin?: number
-  quality?: SleepQuality
-  nightWakes?: number
-  location?: string
+  durationMin?: number // 亲喂
+  side?: BreastSide // 亲喂
+  amountMl?: number // 瓶喂奶粉/母乳
 }
 
 // 换尿布记录
@@ -67,6 +54,20 @@ export interface DiaperRecord extends BaseRecord {
   type: 'diaper'
   diaperType: DiaperType
   rash?: boolean
+}
+
+// 体重记录
+export interface WeightRecord extends BaseRecord {
+  type: 'weight'
+  weightKg: number
+}
+
+// 黄疸记录（头 / 胸 / 腹，单位 mg/dL，至少一个）
+export interface JaundiceRecord extends BaseRecord {
+  type: 'jaundice'
+  faceValue?: number
+  chestValue?: number
+  abdomenValue?: number
 }
 
 // 里程碑
@@ -80,8 +81,9 @@ export interface MilestoneRecord extends BaseRecord {
 
 export type AnyRecord =
   | FeedingRecord
-  | SleepRecord
   | DiaperRecord
+  | WeightRecord
+  | JaundiceRecord
   | MilestoneRecord
 
 export interface RecordTypeMeta {
@@ -100,19 +102,26 @@ export const RECORD_TYPE_META: Record<RecordType, RecordTypeMeta> = {
     color: 'apricot',
     emoji: '🍼'
   },
-  sleep: {
-    type: 'sleep',
-    label: '睡眠',
-    icon: 'Moon',
-    color: 'dusk',
-    emoji: '😴'
-  },
   diaper: {
     type: 'diaper',
     label: '换尿布',
     icon: 'Baby',
     color: 'sage',
     emoji: '🧷'
+  },
+  weight: {
+    type: 'weight',
+    label: '体重',
+    icon: 'Scale',
+    color: 'dusk',
+    emoji: '⚖️'
+  },
+  jaundice: {
+    type: 'jaundice',
+    label: '黄疸',
+    icon: 'Sun',
+    color: 'amber',
+    emoji: '🟡'
   },
   milestone: {
     type: 'milestone',

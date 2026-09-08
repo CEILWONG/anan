@@ -12,9 +12,19 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/HomeView.vue')
       },
       {
+        path: 'charts',
+        name: 'charts',
+        component: () => import('@/views/ChartsView.vue')
+      },
+      {
         path: 'timeline',
         name: 'timeline',
         component: () => import('@/views/TimelineView.vue')
+      },
+      {
+        path: 'settings',
+        name: 'settings',
+        component: () => import('@/views/SettingsView.vue')
       }
     ]
   },
@@ -25,14 +35,19 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/RecordFeedingView.vue')
   },
   {
-    path: '/record/sleep',
-    name: 'record-sleep',
-    component: () => import('@/views/RecordSleepView.vue')
-  },
-  {
     path: '/record/diaper',
     name: 'record-diaper',
     component: () => import('@/views/RecordDiaperView.vue')
+  },
+  {
+    path: '/record/weight',
+    name: 'record-weight',
+    component: () => import('@/views/RecordWeightView.vue')
+  },
+  {
+    path: '/record/jaundice',
+    name: 'record-jaundice',
+    component: () => import('@/views/RecordJaundiceView.vue')
   },
   {
     path: '/record/milestone',
@@ -48,11 +63,6 @@ const routes: RouteRecordRaw[] = [
     path: '/baby/:id/edit',
     name: 'baby-edit',
     component: () => import('@/views/BabyEditView.vue')
-  },
-  {
-    path: '/settings',
-    name: 'settings',
-    component: () => import('@/views/SettingsView.vue')
   },
   {
     path: '/:pathMatch(.*)*',

@@ -6,6 +6,7 @@
 import type { Baby, AnyRecord } from '@/types'
 import * as api from './api'
 import { UnauthorizedError, ConflictError } from './api'
+import { genId } from './crypto'
 
 interface Cache {
   babies: Baby[]
@@ -19,10 +20,54 @@ function cloneCache(c: Cache): Cache {
   return { babies: [...c.babies], records: [...c.records] }
 }
 
+// 兼容旧版 data.md：旧的记录类型/字段可能与新版不完全一致。
+// 渲染前只保证「必要字段」齐全 —— 缺失就补默认值，绝不抛错、也不丢失旧数据。
+function isValid250(s: string) { return typeof s === 'string' && s.trim() !== '' }
+function sanitize(rawData: { babies?: Baby[]; records?: AnyRecord[] }): {
+  babies: Baby[]
+  records: AnyRecord[]
+} {
+  const babies = (rawData.babies || []).map((b) => {
+    const baby: any = b && typeof b === 'object' ? b : {}
+    return {
+      id: isValid250(baby.id) ? baby.id : genId('migrated_baby'),
+      name: isValid250(baby.name) ? baby.name : '宝宝',
+      gender: baby.gender === 'boy' || baby.gender === 'girl' ? baby.gender : 'girl',
+      birthday: isValid250(baby.birthday) ? baby.birthday : new Date().toISOString(),
+      createdAt: isValid250(baby.createdAt) ? baby.createdAt : new Date().toISOString(),
+      ...baby
+    }
+  }) as Baby[]
+
+  const fallbackBabyId = babies[0]?.id
+  const records = (rawData.records || []).map((r) => {
+    const rec: any = r && typeof r === 'object' ? r : {}
+    const datetime = isValid250(rec.datetime)
+      ? rec.datetime
+      : new Date().toISOString()
+    const now = new Date().toISOString()
+    const out: any = {
+      ...rec,
+      id: isValid250(rec.id) ? rec.id : genId('migrated_rec'),
+      createdAt: isValid250(rec.createdAt) ? rec.createdAt : now,
+      datetime,
+      type: isValid250(rec.type) ? rec.type : 'milestone',
+      babyId: isValid250(rec.babyId) ? rec.babyId : (fallbackBabyId || '')
+    }
+    // 里程碑排序依赖 achievedAt，旧数据缺失时回退到 datetime
+    if (rec.type === 'milestone' && !isValid250(rec.achievedAt)) {
+      out.achievedAt = datetime
+    }
+    return out
+  }) as AnyRecord[]
+
+  return { babies, records }
+}
+
 async function ensureLoaded(): Promise<{ data: Cache; version: number }> {
   if (!cache) {
     const res = await api.getData()
-    cache = res.data
+    cache = sanitize(res.data)
     version = res.version
   }
   return { data: cache, version }
@@ -30,7 +75,7 @@ async function ensureLoaded(): Promise<{ data: Cache; version: number }> {
 
 async function loadFresh(): Promise<{ data: Cache; version: number }> {
   const res = await api.getData()
-  cache = res.data
+  cache = sanitize(res.data)
   version = res.version
   return { data: cache, version }
 }
@@ -133,7 +178,8 @@ export const dbApi = {
     return { babies: [...data.babies], records: [...data.records] }
   },
   async importData(data: { babies: Baby[]; records: AnyRecord[] }) {
-    await commit(() => ({ babies: [...data.babies], records: [...data.records] }))
+    const clean = sanitize(data)
+    await commit(() => ({ babies: clean.babies, records: clean.records }))
   },
 
   // ---- 清空 ----

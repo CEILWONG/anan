@@ -1,19 +1,23 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, useRouter, RouterView } from 'vue-router'
-import { Home, Clock, Plus, Settings } from 'lucide-vue-next'
+import { Plus, BarChart3, Settings } from 'lucide-vue-next'
 
 const route = useRoute()
 const router = useRouter()
 
 const tabs = [
-  { name: 'home', path: '/', label: '首页', icon: Home },
-  { name: 'timeline', path: '/timeline', label: '时间线', icon: Clock },
-  { name: 'record', path: '/record/feeding', label: '记录', icon: Plus, primary: true },
+  { name: 'record', path: '/', label: '记录', icon: Plus, primary: true },
+  { name: 'charts', path: '/charts', label: '图表', icon: BarChart3 },
   { name: 'settings', path: '/settings', label: '设置', icon: Settings }
 ]
 
-const currentTab = computed(() => route.name?.toString() || 'home')
+const currentTab = computed(() => {
+  if (route.path === '/' || route.path.startsWith('/record')) return 'record'
+  if (route.path.startsWith('/charts')) return 'charts'
+  if (route.path.startsWith('/settings')) return 'settings'
+  return 'record'
+})
 
 function go(path: string) {
   router.push(path)

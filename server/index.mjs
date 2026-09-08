@@ -6,6 +6,7 @@
 //  - 生产环境顺带托管 ../dist 静态前端
 import express from 'express'
 import fs from 'node:fs'
+import crypto from 'node:crypto'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import yaml from 'js-yaml'
@@ -17,6 +18,8 @@ const DIST_DIR = path.join(ROOT, 'dist')
 const DATA_FILE = process.env.DATA_FILE
   ? path.resolve(process.env.DATA_FILE)
   : path.join(__dirname, 'data.md')
+// 图片上传目录：默认与 data.md 同级，便于一起持久化
+const UPLOAD_DIR = path.join(path.dirname(DATA_FILE), 'uploads')
 
 // ---- 简易 .env 加载（仅 server/.env，已被进程环境变量覆盖） ----
 function loadDotEnv() {
@@ -120,6 +123,30 @@ app.put('/api/data', (req, res) => {
   writeState(newVersion, nextData.babies, nextData.records)
   res.json({ data: { babies: nextData.babies, records: nextData.records }, version: newVersion })
 })
+
+// ---- 图片上传：收 base64 dataUrl，写盘返回可访问 URL ----
+const MIME_EXT = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp', 'image/gif': '.gif' }
+app.post('/api/upload', (req, res) => {
+  const dataUrl = req.body?.dataUrl
+  if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/')) {
+    return res.status(400).json({ error: 'bad image' })
+  }
+  const m = dataUrl.match(/^data:([a-z/]+);base64,(.+)$/)
+  if (!m) return res.status(400).json({ error: 'bad base64' })
+  const mime = m[1]
+  const ext = MIME_EXT[mime]
+  if (!ext) return res.status(400).json({ error: 'unsupported type' })
+  const buf = Buffer.from(m[2], 'base64')
+  if (buf.length > 4 * 1024 * 1024) return res.status(400).json({ error: 'too large' })
+
+  fs.mkdirSync(UPLOAD_DIR, { recursive: true })
+  const name = `${crypto.randomUUID()}${ext}`
+  fs.writeFileSync(path.join(UPLOAD_DIR, name), buf)
+  res.json({ url: `/uploads/${name}` })
+})
+
+// ---- 头像等上传图片的静态服务（在 /api 之外，不受口令拦截，图片可直接引用） ----
+app.use('/uploads', express.static(UPLOAD_DIR))
 
 // ---- 生产：托管前端静态文件 ----
 if (fs.existsSync(DIST_DIR)) {

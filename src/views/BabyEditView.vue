@@ -2,7 +2,8 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useBabyStore } from '@/stores/baby'
-import { ArrowLeft, Check, Loader2, Plus } from 'lucide-vue-next'
+import { uploadImage } from '@/lib/api'
+import { ArrowLeft, Check, Loader2, Camera } from 'lucide-vue-next'
 
 const router = useRouter()
 const route = useRoute()
@@ -15,8 +16,10 @@ const name = ref('')
 const fullName = ref('')
 const gender = ref<'boy' | 'girl'>('girl')
 const birthday = ref(new Date().toISOString().slice(0, 10))
+const avatar = ref('')
 const note = ref('')
 const submitting = ref(false)
+const uploading = ref(false)
 const errorMsg = ref('')
 
 onMounted(async () => {
@@ -28,10 +31,42 @@ onMounted(async () => {
       fullName.value = baby.fullName || ''
       gender.value = baby.gender
       birthday.value = baby.birthday.slice(0, 10)
+      avatar.value = baby.avatar || ''
       note.value = baby.note || ''
     }
   }
 })
+
+async function onPickAvatar(e: Event) {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  if (file.size > 4 * 1024 * 1024) {
+    errorMsg.value = '图片不能超过 4MB'
+    input.value = ''
+    return
+  }
+  uploading.value = true
+  try {
+    const dataUrl = await readAsDataURL(file)
+    const res = await uploadImage(dataUrl)
+    avatar.value = res.url
+  } catch (err: any) {
+    errorMsg.value = err?.message || '图片上传失败'
+  } finally {
+    uploading.value = false
+    input.value = ''
+  }
+}
+
+function readAsDataURL(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+}
 
 async function submit() {
   errorMsg.value = ''
@@ -47,6 +82,7 @@ async function submit() {
         fullName: fullName.value.trim() || undefined,
         gender: gender.value,
         birthday: birthday.value,
+        avatar: avatar.value || undefined,
         note: note.value.trim() || undefined
       })
     } else {
@@ -55,6 +91,7 @@ async function submit() {
         fullName: fullName.value.trim() || undefined,
         gender: gender.value,
         birthday: birthday.value,
+        avatar: avatar.value || undefined,
         note: note.value.trim() || undefined
       })
     }
@@ -88,6 +125,26 @@ async function removeBaby() {
     </div>
 
     <div class="px-5 space-y-5 max-w-md mx-auto">
+      <!-- 头像 -->
+      <div class="flex flex-col items-center py-2">
+        <div class="relative">
+          <div
+            class="w-24 h-24 rounded-full bg-cream-200 flex items-center justify-center text-4xl overflow-hidden"
+          >
+            <img v-if="avatar" :src="avatar" class="w-full h-full object-cover" alt="头像" />
+            <span v-else>{{ gender === 'girl' ? '👧' : '👦' }}</span>
+          </div>
+          <label
+            class="absolute -right-1 -bottom-1 w-8 h-8 bg-apricot-400 text-white rounded-full flex items-center justify-center cursor-pointer shadow-md"
+          >
+            <Camera v-if="!uploading" class="w-4 h-4" />
+            <Loader2 v-else class="w-4 h-4 animate-spin" />
+            <input type="file" accept="image/*" class="hidden" :disabled="uploading" @change="onPickAvatar" />
+          </label>
+        </div>
+        <p class="text-xs text-ink-400 mt-2">点击相机图标设置头像</p>
+      </div>
+
       <!-- 性别 -->
       <div>
         <label class="label">性别</label>

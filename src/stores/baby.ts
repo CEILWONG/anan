@@ -48,6 +48,7 @@ export const useBabyStore = defineStore('baby', () => {
     fullName?: string
     gender: 'boy' | 'girl'
     birthday: string
+    avatar?: string
     avatarColor?: string
     note?: string
   }) {
@@ -57,6 +58,7 @@ export const useBabyStore = defineStore('baby', () => {
       fullName: opts.fullName,
       gender: opts.gender,
       birthday: opts.birthday,
+      avatar: opts.avatar,
       avatarColor: opts.avatarColor,
       note: opts.note,
       createdAt: new Date().toISOString()

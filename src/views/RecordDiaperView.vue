@@ -61,7 +61,7 @@ async function submit() {
       <!-- 快速记录（突出按钮） -->
       <div>
         <label class="label">快速记录</label>
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid grid-cols-3 gap-3">
           <button
             @click="quickRecord('wet')"
             class="card hover:bg-sage-50 transition flex flex-col items-center py-5 bg-gradient-to-br from-yellow-50 to-cream-100"
@@ -76,6 +76,13 @@ async function submit() {
             <span class="text-4xl mb-2">💩</span>
             <span class="text-sm font-medium text-ink-700">大便</span>
           </button>
+          <button
+            @click="quickRecord('mixed')"
+            class="card hover:bg-dusk-50 transition flex flex-col items-center py-5 bg-gradient-to-br from-dusk-50 to-cream-100"
+          >
+            <span class="text-4xl mb-2">🧷</span>
+            <span class="text-sm font-medium text-ink-700">都有</span>
+          </button>
         </div>
       </div>
 
@@ -86,13 +93,12 @@ async function submit() {
           <!-- 类型 -->
           <div>
             <label class="label">类型</label>
-            <div class="grid grid-cols-4 gap-2">
+            <div class="grid grid-cols-3 gap-2">
               <button
                 v-for="t in [
                   { v: 'wet', l: '小便' },
                   { v: 'dirty', l: '大便' },
-                  { v: 'mixed', l: '都有' },
-                  { v: 'dry', l: '干' }
+                  { v: 'mixed', l: '都有' }
                 ]"
                 :key="t.v"
                 @click="diaperType = t.v as DiaperType"

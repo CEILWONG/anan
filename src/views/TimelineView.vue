@@ -2,7 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRecordsStore } from '@/stores/records'
 import { useBabyStore } from '@/stores/baby'
-import { fmtTime, fmtDuration, dayjs } from '@/lib/utils'
+import { fmtTime, dayjs } from '@/lib/utils'
 import { Filter } from 'lucide-vue-next'
 import type { AnyRecord, RecordType, UserRole } from '@/types'
 
@@ -72,20 +72,26 @@ function describe(r: AnyRecord): string {
   switch (r.type) {
     case 'feeding': {
       const f = r as any
-      if (f.method === 'breast') return `母乳${f.durationMin ? ` · ${f.durationMin}分钟` : ''}${f.side ? ` · ${f.side === 'left' ? '左' : f.side === 'right' ? '右' : '两侧'}` : ''}`
-      if (f.method === 'bottle') return `奶粉 · ${f.amountMl}ml`
-      if (f.method === 'solid') return `辅食 · ${f.foodName || ''}`
+      if (f.method === 'breast') return `亲喂${f.durationMin ? ` · ${f.durationMin}分钟` : ''}${f.side ? ` · ${f.side === 'left' ? '左' : f.side === 'right' ? '右' : '两侧'}` : ''}`
+      if (f.method === 'formula') return `瓶喂奶粉 · ${f.amountMl}ml`
+      if (f.method === 'pumped_milk') return `瓶喂母乳 · ${f.amountMl}ml`
       return '喂养'
-    }
-    case 'sleep': {
-      const s = r as any
-      if (s.endTime) return `睡眠 · ${fmtDuration(s.durationMin || 0)}`
-      return '开始睡眠'
     }
     case 'diaper': {
       const d = r as any
       const t = d.diaperType
-      return t === 'wet' ? '小便' : t === 'dirty' ? '大便' : t === 'mixed' ? '大小便' : '干尿布'
+      return t === 'wet' ? '小便' : t === 'dirty' ? '大便' : '大小便'
+    }
+    case 'weight': {
+      return `体重 · ${(r as any).weightKg} kg`
+    }
+    case 'jaundice': {
+      const j = r as any
+      const parts = []
+      if (j.faceValue !== undefined) parts.push(`头${j.faceValue}`)
+      if (j.chestValue !== undefined) parts.push(`胸${j.chestValue}`)
+      if (j.abdomenValue !== undefined) parts.push(`腹${j.abdomenValue}`)
+      return `黄疸${parts.length ? ' · ' + parts.join(' ') : ''}`
     }
     case 'milestone':
       return (r as any).title || '里程碑'
@@ -108,8 +114,9 @@ function describe(r: AnyRecord): string {
         v-for="f in [
           { v: 'all', l: '全部' },
           { v: 'feeding', l: '🍼 喂养' },
-          { v: 'sleep', l: '😴 睡眠' },
           { v: 'diaper', l: '🧷 尿布' },
+          { v: 'weight', l: '⚖️ 体重' },
+          { v: 'jaundice', l: '🟡 黄疸' },
           { v: 'milestone', l: '⭐ 里程碑' }
         ]"
         :key="f.v"
@@ -147,8 +154,9 @@ function describe(r: AnyRecord): string {
             <div class="flex flex-col items-center w-12 flex-shrink-0">
               <span class="text-lg">
                 <span v-if="r.type === 'feeding'">🍼</span>
-                <span v-else-if="r.type === 'sleep'">😴</span>
                 <span v-else-if="r.type === 'diaper'">🧷</span>
+                <span v-else-if="r.type === 'weight'">⚖️</span>
+                <span v-else-if="r.type === 'jaundice'">🟡</span>
                 <span v-else-if="r.type === 'milestone'">⭐</span>
                 <span v-else>📝</span>
               </span>

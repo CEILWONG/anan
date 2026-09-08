@@ -18,8 +18,6 @@ const submitting = ref(false)
 const durationMin = ref<number>(15)
 const side = ref<BreastSide>('left')
 const amountMl = ref<number>(120)
-const foodName = ref('')
-const foodAmount = ref('')
 const note = ref('')
 
 onMounted(async () => {
@@ -28,9 +26,7 @@ onMounted(async () => {
 
 const canSubmit = computed(() => {
   if (method.value === 'breast') return true
-  if (method.value === 'bottle') return amountMl.value > 0
-  if (method.value === 'solid') return foodName.value.trim().length > 0
-  return false
+  return amountMl.value > 0
 })
 
 async function submit() {
@@ -46,11 +42,8 @@ async function submit() {
     if (method.value === 'breast') {
       record.durationMin = durationMin.value
       record.side = side.value
-    } else if (method.value === 'bottle') {
+    } else {
       record.amountMl = amountMl.value
-    } else if (method.value === 'solid') {
-      record.foodName = foodName.value.trim()
-      record.foodAmount = foodAmount.value.trim() || undefined
     }
     await recordsStore.addFeeding(record)
     router.back()
@@ -80,9 +73,9 @@ async function submit() {
         <div class="grid grid-cols-3 gap-2">
           <button
             v-for="m in [
-              { v: 'breast', l: '🍼 母乳' },
-              { v: 'bottle', l: '🧃 奶粉' },
-              { v: 'solid', l: '🍚 辅食' }
+              { v: 'breast', l: '🤱 亲喂' },
+              { v: 'formula', l: '🍼 瓶喂奶粉' },
+              { v: 'pumped_milk', l: '🧴 瓶喂母乳' }
             ]"
             :key="m.v"
             @click="method = m.v as FeedingMethod"
@@ -151,8 +144,8 @@ async function submit() {
         </div>
       </template>
 
-      <!-- 奶粉字段 -->
-      <template v-else-if="method === 'bottle'">
+      <!-- 瓶喂字段 -->
+      <template v-else-if="method === 'formula' || method === 'pumped_milk'">
         <div>
           <label class="label">奶量（ml）</label>
           <div class="flex items-center gap-2">
@@ -173,28 +166,6 @@ async function submit() {
               class="w-10 h-10 bg-white rounded-xl border border-cream-200 text-ink-500"
             >+</button>
           </div>
-        </div>
-      </template>
-
-      <!-- 辅食字段 -->
-      <template v-else>
-        <div>
-          <label class="label">吃了什么</label>
-          <input
-            v-model="foodName"
-            class="input"
-            placeholder="比如：南瓜米糊、苹果泥"
-            maxlength="30"
-          />
-        </div>
-        <div>
-          <label class="label">吃了多少（可选）</label>
-          <input
-            v-model="foodAmount"
-            class="input"
-            placeholder="比如：半碗、3 勺"
-            maxlength="20"
-          />
         </div>
       </template>
 

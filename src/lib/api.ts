@@ -63,3 +63,9 @@ export const getData = () => request<GetDataResp>('/api/data', { method: 'GET' }
 
 export const putData = (body: { data: ServerData; version: number }) =>
   request<PutDataResp>('/api/data', { method: 'PUT', body: JSON.stringify(body) })
+
+export const uploadImage = (dataUrl: string) =>
+  request<{ url: string }>('/api/upload', {
+    method: 'POST',
+    body: JSON.stringify({ dataUrl })
+  })
