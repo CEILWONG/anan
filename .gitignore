@@ -1,0 +1,23 @@
+# 依赖
+node_modules/
+
+# 构建产物
+dist/
+dist-ssr/
+
+# 本地数据（IndexedDB 导出等，不入库）
+*.local
+exports/
+
+# 共享后端：数据文件与本地配置（含口令，切记不入库）
+server/data.md
+server/data.md.tmp
+server/.env
+*.zip
+
+# 系统/编辑器
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log

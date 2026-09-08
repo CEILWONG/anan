@@ -1,0 +1,123 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body,
+#app {
+  min-height: 100%;
+  min-height: -webkit-fill-available;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background-color: #faf7f2;
+  color: #2d2a22;
+  font-family: 'PingFang SC', 'Microsoft YaHei', Inter, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  overscroll-behavior-y: none; /* 防止 iOS 下拉刷新 */
+  touch-action: manipulation; /* 优化双击缩放 */
+}
+
+body {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+
+input,
+textarea,
+select {
+  font-family: inherit;
+  font-size: 16px; /* 防止 iOS 点击缩放 */
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+input[type="date"],
+input[type="datetime-local"],
+input[type="time"] {
+  -webkit-appearance: none;
+  appearance: none;
+  min-height: 48px; /* 移动端更容易点击 */
+}
+
+/* 滚动条 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #e8dcc4;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #d9c7a6;
+}
+
+/* 自定义工具类 */
+@layer components {
+  .card {
+    @apply bg-white rounded-2xl p-4 shadow-sm border border-cream-200/50;
+  }
+  .btn-primary {
+    @apply bg-apricot-400 text-white px-5 py-3 rounded-2xl font-medium hover:bg-apricot-500 active:bg-apricot-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-secondary {
+    @apply bg-cream-200 text-ink-600 px-5 py-3 rounded-2xl font-medium hover:bg-cream-300 active:bg-cream-300 transition-colors;
+  }
+  .btn-ghost {
+    @apply text-ink-500 px-4 py-2 rounded-xl hover:bg-cream-200 transition-colors;
+  }
+  .input {
+    @apply w-full bg-cream-100 border border-cream-300 rounded-xl px-4 py-3 outline-none focus:border-apricot-400 focus:bg-white transition-colors placeholder:text-ink-300;
+  }
+  .label {
+    @apply block text-sm text-ink-500 mb-1.5 font-medium;
+  }
+  .chip {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-cream-200 text-ink-600;
+  }
+  .chip-active {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-apricot-400 text-white;
+  }
+  .heading-1 {
+    @apply text-2xl font-serif font-semibold text-ink-700;
+  }
+  .heading-2 {
+    @apply text-lg font-medium text-ink-700;
+  }
+  .body-text {
+    @apply text-ink-500;
+  }
+  .muted {
+    @apply text-ink-300 text-xs;
+  }
+}
+
+/* 隐藏 iOS 输入框默认样式 */
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type='number'] {
+  -moz-appearance: textfield;
+}

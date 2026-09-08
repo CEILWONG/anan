@@ -1,0 +1,19 @@
+services:
+  anan:
+    image: ceilwong/anan:latest
+    container_name: anan
+    restart: unless-stopped
+    environment:
+      # 访问口令，改成你的（多用户共享数据，务必设置）
+      PASSKEY: change-me-please
+    ports:
+      # 宿主机 8080 -> 容器 3001；云主机安全组放行 8080 即可
+      - "8080:3001"
+    volumes:
+      # 数据持久化：把 server/data.md 存到宿主机，升级容器不丢数据
+      - anan_data:/app/server
+    # 若本地构建，把上面 image 换掉并取消注释：
+    # build: .
+
+volumes:
+  anan_data:
