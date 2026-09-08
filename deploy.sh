@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# 云主机部署脚本：拉取最新镜像并重启容器
-# 用法：./deploy.sh
+# 云主机部署脚本：拉取指定镜像并重启容器
+# 用法：./deploy.sh [TAG]    TAG 可省略，默认 latest；也可传时间戳如 20260908-1430
 set -e
 
-IMAGE="ceilwong/anan:latest"
+TAG="${1:-latest}"
+IMAGE="ceilwong/anan:${TAG}"
 
 echo ">> 拉取最新镜像 ${IMAGE}"
 docker pull "${IMAGE}"

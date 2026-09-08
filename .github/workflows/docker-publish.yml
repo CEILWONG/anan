@@ -34,6 +34,10 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Generate timestamp tag
+        id: ts
+        run: echo "timestamp=$(date -u +'%Y%m%d-%H%M')" >> "$GITHUB_OUTPUT"
+
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
@@ -41,6 +45,7 @@ jobs:
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/anan:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/anan:${{ steps.ts.outputs.timestamp }}
             ${{ secrets.DOCKERHUB_USERNAME }}/anan:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
