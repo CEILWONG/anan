@@ -14,13 +14,11 @@ import {
   Trash2
 } from 'lucide-vue-next'
 import { dbApi } from '@/lib/db'
-import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
 const userStore = useUserStore()
 const babyStore = useBabyStore()
 const recordsStore = useRecordsStore()
-const authStore = useAuthStore()
 
 const exporting = ref(false)
 const importing = ref(false)
@@ -106,24 +104,6 @@ const count = computed(() => ({
   babies: babyStore.babies.length,
   records: recordsStore.records.length
 }))
-
-// 访问口令
-const passkeyInput = ref('')
-const passkeyOpen = ref(false)
-async function savePasskey() {
-  if (!passkeyInput.value.trim()) return showMessage('请输入口令', 'error')
-  const ok = await authStore.login(passkeyInput.value)
-  if (ok) {
-    passkeyInput.value = ''
-    showMessage('访问口令已更新')
-  } else {
-    showMessage(authStore.error, 'error')
-  }
-}
-async function logout() {
-  authStore.logout()
-  passkeyInput.value = ''
-}
 </script>
 
 <template>
@@ -192,33 +172,6 @@ async function logout() {
               <Check class="w-4 h-4 text-sage-500" />
             </button>
           </div>
-        </div>
-      </div>
-
-      <!-- 访问口令（可选） -->
-      <div>
-        <h3 class="text-xs text-ink-400 mb-2 uppercase tracking-wide">访问</h3>
-        <div class="card space-y-3">
-          <button @click="passkeyOpen = !passkeyOpen" class="text-sm text-ink-700 w-full text-left">
-            🔑 访问口令{{ passkeyOpen ? '（收起）' : '（展开）' }}
-          </button>
-          <template v-if="passkeyOpen">
-            <div class="flex gap-2">
-              <input
-                v-model="passkeyInput"
-                type="password"
-                class="input flex-1 text-sm"
-                placeholder="新访问口令"
-                @keyup.enter="savePasskey"
-              />
-              <button @click="savePasskey" class="px-3 bg-apricot-400 text-white rounded-xl text-sm font-medium">
-                保存
-              </button>
-            </div>
-            <button @click="logout" class="text-xs text-dusk-400">
-              退出（清除本地口令，回到口令页）
-            </button>
-          </template>
         </div>
       </div>
 

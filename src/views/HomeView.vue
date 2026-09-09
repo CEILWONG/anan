@@ -5,7 +5,7 @@ import { useUserStore } from '@/stores/user'
 import { useBabyStore } from '@/stores/baby'
 import { useRecordsStore } from '@/stores/records'
 import { ageOf, fmtTime, dayjs } from '@/lib/utils'
-import { Milk, Scale, Sun, Star, Plus, ChevronDown, Cake, Baby as BabyIcon } from 'lucide-vue-next'
+import { Milk, Scale, Sun, Star, Plus, ChevronDown, Cake, Camera, Baby as BabyIcon } from 'lucide-vue-next'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -19,7 +19,35 @@ onMounted(async () => {
 
 const currentBaby = computed(() => babyStore.currentBaby)
 const summary = computed(() => recordsStore.todaySummary)
-const lastFeeding = computed(() => recordsStore.lastFeeding)
+
+// 上次喂养的时间
+const lastFeeding = computed(() => {
+  const recs = recordsStore.forCurrentBaby().filter((r) => r.type === 'feeding')
+  if (recs.length === 0) return ''
+  recs.sort((a, b) => b.datetime.localeCompare(a.datetime))
+  return fmtTime(recs[0].datetime)
+})
+
+// 最新一次黄疸平均值（头/胸/腹已填的值取平均）
+const jaundiceAvg = computed(() => {
+  const recs = recordsStore.forCurrentBaby().filter((r) => r.type === 'jaundice')
+  if (recs.length === 0) return '—'
+  recs.sort((a, b) => b.datetime.localeCompare(a.datetime))
+  const j = recs[0] as any
+  const vals = [j.faceValue, j.chestValue, j.abdomenValue].filter(
+    (v: any) => typeof v === 'number' && !Number.isNaN(v)
+  )
+  if (vals.length === 0) return '—'
+  return (vals.reduce((a: number, b: number) => a + b, 0) / vals.length).toFixed(1)
+})
+
+// 上一次换尿布的时间
+const lastDiaper = computed(() => {
+  const recs = recordsStore.forCurrentBaby().filter((r) => r.type === 'diaper')
+  if (recs.length === 0) return ''
+  recs.sort((a, b) => b.datetime.localeCompare(a.datetime))
+  return fmtTime(recs[0].datetime)
+})
 
 const ageText = computed(() => {
   if (!currentBaby.value) return ''
@@ -89,12 +117,24 @@ function recordNow(type: string) {
 
       <div class="relative flex items-start justify-between">
         <div class="flex items-center gap-3">
-          <div
-            class="w-16 h-16 rounded-2xl bg-white/70 flex items-center justify-center text-4xl overflow-hidden"
+          <button
+            @click="router.push(`/baby/${currentBaby.id}/edit`)"
+            class="relative w-16 h-16 rounded-2xl bg-white/70 flex items-center justify-center text-4xl overflow-hidden group"
+            aria-label="修改宝宝信息和头像"
           >
             <img v-if="currentBaby.avatar" :src="currentBaby.avatar" class="w-full h-full object-cover" alt="头像" />
             <span v-else>{{ currentBaby.gender === 'girl' ? '👧' : '👦' }}</span>
-          </div>
+            <span
+              class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition flex items-center justify-center"
+            >
+              <Camera class="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition" />
+            </span>
+            <span
+              class="absolute bottom-0.5 right-0.5 w-5 h-5 bg-apricot-400 rounded-full flex items-center justify-center shadow"
+            >
+              <Camera class="w-3 h-3 text-white" />
+            </span>
+          </button>
           <div>
             <p class="text-xs text-ink-400 mb-0.5">Hi，{{ currentBaby.name }}</p>
             <h1 class="text-2xl font-serif text-ink-700 mb-1">{{ currentBaby.name }}</h1>
@@ -154,26 +194,19 @@ function recordNow(type: string) {
         <div class="text-xl font-serif text-ink-700">{{ summary.feeding }}</div>
         <div class="text-xs text-ink-400">次喂养</div>
       </div>
-      <div v-if="summary.milkMl > 0" class="card text-center py-4">
-        <div class="text-2xl mb-1">🥛</div>
-        <div class="text-sm font-serif text-ink-700 leading-tight">{{ summary.milkMl }}ml</div>
-        <div class="text-xs text-ink-400">瓶喂奶量</div>
-      </div>
-      <div v-else class="card text-center py-4">
-        <div class="text-2xl mb-1">🧷</div>
-        <div class="text-xl font-serif text-ink-700">{{ summary.diaper }}</div>
-        <div class="text-xs text-ink-400">换尿布</div>
+      <div class="card text-center py-4">
+        <div class="text-2xl mb-1">�</div>
+        <div class="text-xl font-serif text-ink-700">{{ lastDiaper || '—' }}</div>
+        <div class="text-xs text-ink-400">上次尿布</div>
       </div>
       <div class="card text-center py-4">
-        <div class="text-2xl mb-1">⚖️</div>
-        <div class="text-xl font-serif text-ink-700">{{ summary.weight }}</div>
-        <div class="text-xs text-ink-400">体重</div>
+        <div class="text-2xl mb-1">🟡</div>
+        <div class="text-xl font-serif text-ink-700">{{ jaundiceAvg }}</div>
+        <div class="text-xs text-ink-400">黄疸均值</div>
       </div>
       <div class="card text-center py-4">
         <div class="text-2xl mb-1">⏱️</div>
-        <div class="text-xl font-serif text-ink-700">
-          {{ lastFeeding ? fmtTime(lastFeeding.datetime) : '—' }}
-        </div>
+        <div class="text-xl font-serif text-ink-700">{{ lastFeeding || '—' }}</div>
         <div class="text-xs text-ink-400">上次喂</div>
       </div>
     </div>
