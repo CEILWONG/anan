@@ -17,11 +17,13 @@ const babyStore = useBabyStore()
 const recordsStore = useRecordsStore()
 
 const weightChartEl = ref<HTMLDivElement>()
-const feedingChartEl = ref<HTMLDivElement>()
+const feedingBreastEl = ref<HTMLDivElement>()
+const feedingBottleEl = ref<HTMLDivElement>()
 const diaperChartEl = ref<HTMLDivElement>()
 
 let weightChart: echarts.ECharts | null = null
-let feedingChart: echarts.ECharts | null = null
+let feedingBreastChart: echarts.ECharts | null = null
+let feedingBottleChart: echarts.ECharts | null = null
 let diaperChart: echarts.ECharts | null = null
 
 onMounted(async () => {
@@ -31,9 +33,19 @@ onMounted(async () => {
   renderAll()
 })
 
+function zoomCfg(days: string[]) {
+  return days.length > 12
+    ? [
+        { type: 'inside', start: Math.max(0, 100 - (12 / days.length) * 100), end: 100 },
+        { type: 'slider', bottom: 0, height: 16, start: Math.max(0, 100 - (12 / days.length) * 100), end: 100 }
+      ]
+    : []
+}
+
 function renderAll() {
   renderWeight()
-  renderFeeding()
+  renderFeedingBreast()
+  renderFeedingBottle()
   renderDiaper()
 }
 
@@ -66,52 +78,71 @@ function renderWeight() {
   })
 }
 
-// ---- 喂养趋势（按天：亲喂/瓶喂次数堆积 + 总奶量）----
-function renderFeeding() {
-  if (!feedingChartEl.value) return
-  const META = {
-    breast: { label: '亲喂', color: '#f4a261' },
-    formula: { label: '瓶喂奶粉', color: '#8ecae6' },
-    pumped_milk: { label: '瓶喂母乳', color: '#a4c3a8' }
-  }
-  type DayAgg = { breast: number; formula: number; pumped_milk: number; milkMl: number }
+// ---- 喂养①：亲喂时长（按天总分钟数）----
+function renderFeedingBreast() {
+  if (!feedingBreastEl.value) return
+  const map = new Map<string, number>()
+  recordsStore.forCurrentBaby().filter((r) => r.type === 'feeding').forEach((r) => {
+    const f = r as FeedingRecord
+    if (f.method !== 'breast') return
+    const day = dayjs(r.datetime).format('MM-DD')
+    map.set(day, (map.get(day) || 0) + (f.durationMin || 0))
+  })
+  if (map.size === 0) return
+  feedingBreastEl.value.style.display = 'block'
+  const days = [...map.keys()].sort()
+  feedingBreastChart = feedingBreastChart || echarts.init(feedingBreastEl.value)
+  feedingBreastChart.setOption({
+    tooltip: { trigger: 'axis' },
+    legend: { data: ['亲喂时长(分钟)'], top: 0 },
+    grid: { left: 8, right: 8, top: 32, bottom: days.length > 12 ? 40 : 26, containLabel: true },
+    xAxis: { type: 'category', data: days },
+    yAxis: { type: 'value', name: '分钟' },
+    series: [{
+      name: '亲喂时长(分钟)',
+      type: 'line',
+      smooth: true,
+      symbol: 'circle',
+      symbolSize: 6,
+      lineStyle: { width: 2.5, color: '#f4a261' },
+      itemStyle: { color: '#f4a261' },
+      areaStyle: { opacity: 0.12 },
+      data: days.map((d) => map.get(d)!)
+    }],
+    dataZoom: zoomCfg(days)
+  })
+}
+
+// ---- 喂养②：瓶喂趋势（奶粉 / 母乳每日奶量）----
+function renderFeedingBottle() {
+  if (!feedingBottleEl.value) return
+  type DayAgg = { formula: number; pumped: number }
   const map = new Map<string, DayAgg>()
   recordsStore.forCurrentBaby().filter((r) => r.type === 'feeding').forEach((r) => {
-    const day = dayjs(r.datetime).format('MM-DD')
     const f = r as FeedingRecord
-    const cur = map.get(day) || { breast: 0, formula: 0, pumped_milk: 0, milkMl: 0 }
-    if (f.method === 'formula') cur.formula++
-    else if (f.method === 'pumped_milk') cur.pumped_milk++
-    else cur.breast++
-    cur.milkMl += f.amountMl || 0
+    if (f.method === 'breast') return
+    const day = dayjs(r.datetime).format('MM-DD')
+    const cur = map.get(day) || { formula: 0, pumped: 0 }
+    if (f.method === 'formula') cur.formula += f.amountMl || 0
+    else cur.pumped += f.amountMl || 0
     map.set(day, cur)
   })
   if (map.size === 0) return
-  feedingChartEl.value.style.display = 'block'
+  feedingBottleEl.value.style.display = 'block'
   const days = [...map.keys()].sort()
   const by = (k: keyof DayAgg) => days.map((d) => map.get(d)![k])
-  feedingChart = feedingChart || echarts.init(feedingChartEl.value)
-  feedingChart.setOption({
-    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-    legend: { data: ['亲喂', '瓶喂奶粉', '瓶喂母乳', '总奶量(ml)'], top: 0 },
-    grid: { left: 8, right: 34, top: 32, bottom: days.length > 12 ? 40 : 26, containLabel: true },
+  feedingBottleChart = feedingBottleChart || echarts.init(feedingBottleEl.value)
+  feedingBottleChart.setOption({
+    tooltip: { trigger: 'axis' },
+    legend: { data: ['奶粉奶量(ml)', '母乳奶量(ml)'], top: 0 },
+    grid: { left: 8, right: 8, top: 32, bottom: days.length > 12 ? 40 : 26, containLabel: true },
     xAxis: { type: 'category', data: days },
-    yAxis: [
-      { type: 'value', name: '次数' },
-      { type: 'value', name: 'ml', splitLine: { show: false } }
-    ],
+    yAxis: { type: 'value', name: 'ml' },
     series: [
-      { name: '亲喂', type: 'bar', stack: 'feed', barMaxWidth: 18, itemStyle: { color: META.breast.color }, data: by('breast') },
-      { name: '瓶喂奶粉', type: 'bar', stack: 'feed', barMaxWidth: 18, itemStyle: { color: META.formula.color }, data: by('formula') },
-      { name: '瓶喂母乳', type: 'bar', stack: 'feed', barMaxWidth: 18, itemStyle: { color: META.pumped_milk.color }, data: by('pumped_milk') },
-      { name: '总奶量(ml)', type: 'line', yAxisIndex: 1, smooth: true, symbol: 'circle', symbolSize: 6, lineStyle: { width: 2.5, color: '#5b8db8' }, itemStyle: { color: '#5b8db8' }, data: by('milkMl') }
+      { name: '奶粉奶量(ml)', type: 'bar', barMaxWidth: 14, itemStyle: { color: '#8ecae6' }, data: by('formula') },
+      { name: '母乳奶量(ml)', type: 'bar', barMaxWidth: 14, itemStyle: { color: '#a4c3a8' }, data: by('pumped') }
     ],
-    dataZoom: days.length > 12
-      ? [
-          { type: 'inside', start: Math.max(0, 100 - (12 / days.length) * 100), end: 100 },
-          { type: 'slider', bottom: 0, height: 16, start: Math.max(0, 100 - (12 / days.length) * 100), end: 100 }
-        ]
-      : []
+    dataZoom: zoomCfg(days)
   })
 }
 
@@ -187,10 +218,11 @@ const latestWeight = computed(() => {
 })
 function toGrace(kg: number) {
   const g = Math.round(kg * 1000)
-  const wholeJin = Math.floor(g / 500)
-  const liang = (g - wholeJin * 500) / 50
-  const liangStr = Number.isInteger(liang) ? String(liang) : liang.toFixed(1)
-  return { kg, g, jinLabel: `${wholeJin}斤${liangStr}两` }
+  const totalJin = g / 500
+  let wholeJin = Math.floor(totalJin)
+  let liang = Math.round((g - wholeJin * 500) / 50)
+  if (liang >= 10) { wholeJin += 1; liang = 0 } // 满10两进位成1斤
+  return { g, jinLabel: `${wholeJin}斤${liang}两` }
 }
 const latestWeightInfo = computed(() =>
   latestWeight.value ? toGrace(latestWeight.value.weightKg) : null
@@ -206,10 +238,16 @@ const latestWeightInfo = computed(() =>
       </div>
       <button
         @click="router.push('/settings')"
-        class="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm"
+        class="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm overflow-hidden"
         aria-label="设置"
       >
-        <span class="text-xl">{{ babyStore.currentBaby?.gender === 'girl' ? '👧' : '👦' }}</span>
+        <img
+          v-if="babyStore.currentBaby?.avatar"
+          :src="babyStore.currentBaby.avatar"
+          class="w-full h-full object-cover"
+          alt="头像"
+        />
+        <span v-else class="text-xl">{{ babyStore.currentBaby?.gender === 'girl' ? '👧' : '👦' }}</span>
       </button>
     </div>
 
@@ -227,8 +265,7 @@ const latestWeightInfo = computed(() =>
         <h3 class="heading-2 mb-3">⚖️ 体重曲线</h3>
         <template v-if="latestWeightInfo">
           <div class="flex items-baseline gap-2">
-            <span class="text-2xl font-serif text-ink-700">{{ latestWeightInfo.kg }} kg</span>
-            <span class="text-sm text-ink-400">{{ latestWeightInfo.g }} g</span>
+            <span class="text-2xl font-serif text-ink-700">{{ latestWeightInfo.g }} g</span>
             <span class="text-base text-apricot-500 font-medium">{{ latestWeightInfo.jinLabel }}</span>
           </div>
           <p class="text-xs text-ink-400 mt-1 mb-3">
@@ -241,12 +278,21 @@ const latestWeightInfo = computed(() =>
         </p>
       </div>
 
-      <!-- 喂养趋势 -->
+      <!-- 喂养①：亲喂时长 -->
       <div class="card mb-5">
-        <h3 class="heading-2 mb-3">🍼 喂养趋势</h3>
-        <div ref="feedingChartEl" class="h-56 w-full" style="display:none"></div>
-        <p v-if="!recordsStore.forCurrentBaby().some((r) => r.type === 'feeding')" class="text-xs text-ink-400 text-center py-8">
-          还没有喂养记录
+        <h3 class="heading-2 mb-3">🤱 亲喂时长</h3>
+        <div ref="feedingBreastEl" class="h-56 w-full" style="display:none"></div>
+        <p v-if="!recordsStore.forCurrentBaby().some((r) => r.type === 'feeding' && (r as any).method === 'breast')" class="text-xs text-ink-400 text-center py-8">
+          还没有亲喂记录
+        </p>
+      </div>
+
+      <!-- 喂养②：瓶喂趋势（奶粉 / 母乳） -->
+      <div class="card mb-5">
+        <h3 class="heading-2 mb-3">🍼 瓶喂趋势</h3>
+        <div ref="feedingBottleEl" class="h-56 w-full" style="display:none"></div>
+        <p v-if="!recordsStore.forCurrentBaby().some((r) => r.type === 'feeding' && (r as any).method !== 'breast')" class="text-xs text-ink-400 text-center py-8">
+          还没有瓶喂记录
         </p>
       </div>
 

@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useRecordsStore } from '@/stores/records'
 import { useBabyStore } from '@/stores/baby'
 import { fmtTime, dayjs } from '@/lib/utils'
-import { Filter } from 'lucide-vue-next'
+import { Filter, Trash2 } from 'lucide-vue-next'
 import type { AnyRecord, RecordType, UserRole } from '@/types'
 
 const recordsStore = useRecordsStore()
@@ -15,6 +15,87 @@ onMounted(async () => {
   await babyStore.loadBabies()
   await recordsStore.loadAll()
 })
+
+// ---- 左滑删除 ----
+const SWIPE_REVEAL = 80 // 完全展开的偏移量(px)
+const SWIPE_TRIGGER = 48 // 超过即触发删除展开
+const drag = reactive<Record<string, number>>({}) // 拖动过程中的偏移
+const swipeOpen = reactive<Record<string, boolean>>({}) // 是否已展开删除按钮
+let touch: { id: string; startX: number; startY: number; base: number; horizontal: boolean } | null = null
+
+function onTouchStart(e: TouchEvent, r: AnyRecord) {
+  // 已展开时忽略拖动，点击卡片可收起
+  if (swipeOpen[r.id]) return
+  touch = {
+    id: r.id,
+    startX: e.touches[0].clientX,
+    startY: e.touches[0].clientY,
+    base: drag[r.id] || 0,
+    horizontal: false
+  }
+}
+function onTouchMove(e: TouchEvent) {
+  if (!touch) return
+  const dx = e.touches[0].clientX - touch.startX
+  const dy = e.touches[0].clientY - touch.startY
+  // 竖向滚动不拦截，确定是横向滑动时才处理
+  if (!touch.horizontal) {
+    if (Math.abs(dy) > Math.abs(dx)) return
+    touch.horizontal = true
+  }
+  e.preventDefault()
+  drag[touch.id] = Math.max(0, Math.min(SWIPE_REVEAL, touch.base - dx))
+}
+function onTouchEnd(r: AnyRecord) {
+  if (!touch || touch.id !== r.id) return
+  const opened = (drag[r.id] || 0) >= SWIPE_TRIGGER
+  if (opened) {
+    drag[r.id] = SWIPE_REVEAL
+    swipeOpen[r.id] = true
+  } else {
+    drag[r.id] = 0
+    swipeOpen[r.id] = false
+  }
+  touch = null
+}
+function onTap(r: AnyRecord) {
+  if (!swipeOpen[r.id]) return
+  swipeOpen[r.id] = false
+  drag[r.id] = 0
+}
+async function deleteOne(r: AnyRecord) {
+  if (!window.confirm(`确定删除这条记录吗？\n「${describe(r)}」\n删除后无法恢复。`)) return
+  await recordsStore.deleteRecord(r.id)
+  delete drag[r.id]
+  delete swipeOpen[r.id]
+}
+function offsetOf(id: string) {
+  const open = swipeOpen[id] ? SWIPE_REVEAL : 0
+  const curr = drag[id] || 0
+  return Math.max(open, curr)
+}
+
+// ---- 每条记录的图标 + 颜色（区分喂养/尿布子类型）----
+function recordVisual(r: AnyRecord) {
+  switch (r.type) {
+    case 'feeding': {
+      const f = r as any
+      if (f.method === 'formula') return { emoji: '🍼', bg: 'bg-sky-100' }
+      if (f.method === 'pumped_milk') return { emoji: '🥛', bg: 'bg-green-100' }
+      return { emoji: '🤱', bg: 'bg-apricot-100' }
+    }
+    case 'diaper': {
+      const t = (r as any).diaperType
+      if (t === 'dirty') return { emoji: '💩', bg: 'bg-amber-100' }
+      if (t === 'mixed') return { emoji: '🧷', bg: 'bg-purple-100' }
+      return { emoji: '💧', bg: 'bg-sky-100' }
+    }
+    case 'weight': return { emoji: '⚖️', bg: 'bg-dusk-100' }
+    case 'jaundice': return { emoji: '🟡', bg: 'bg-yellow-100' }
+    case 'milestone': return { emoji: '⭐', bg: 'bg-cream-200' }
+    default: return { emoji: '📝', bg: 'bg-cream-200' }
+  }
+}
 
 const groupedRecords = computed(() => {
   const babyId = babyStore.currentBabyId
@@ -149,25 +230,37 @@ function describe(r: AnyRecord): string {
           <div
             v-for="r in group.items"
             :key="r.id"
-            class="card flex items-start gap-3"
+            class="relative rounded-2xl overflow-hidden"
           >
-            <div class="flex flex-col items-center w-12 flex-shrink-0">
-              <span class="text-lg">
-                <span v-if="r.type === 'feeding'">🍼</span>
-                <span v-else-if="r.type === 'diaper'">🧷</span>
-                <span v-else-if="r.type === 'weight'">⚖️</span>
-                <span v-else-if="r.type === 'jaundice'">🟡</span>
-                <span v-else-if="r.type === 'milestone'">⭐</span>
-                <span v-else>📝</span>
-              </span>
-              <span class="text-[10px] text-ink-400 mt-1">{{ fmtTime(r.datetime) }}</span>
-            </div>
-            <div class="flex-1 min-w-0">
-              <p class="text-sm text-ink-700">{{ describe(r) }}</p>
-              <p v-if="r.note" class="text-xs text-ink-400 mt-1">{{ r.note }}</p>
-              <div class="flex items-center gap-1.5 mt-2 text-[10px] text-ink-300">
-                <span>{{ authorEmoji(r) }}</span>
-                <span>{{ authorName(r) }}</span>
+            <!-- 底层删除按钮 -->
+            <button
+              class="absolute inset-y-0 right-0 w-20 bg-dusk-400 flex items-center justify-center gap-1 text-white text-sm font-medium"
+              @click="deleteOne(r)"
+            >
+              <Trash2 class="w-4 h-4" /> 删除
+            </button>
+            <!-- 记录卡片（左滑） -->
+            <div
+              class="card flex items-start gap-3 relative transition-transform duration-200"
+              :style="{ transform: `translateX(-${offsetOf(r.id)}px)` }"
+              @touchstart="onTouchStart($event, r)"
+              @touchmove="onTouchMove($event)"
+              @touchend="onTouchEnd(r)"
+              @click="onTap(r)"
+            >
+              <div class="flex flex-col items-center w-12 flex-shrink-0">
+                <div :class="['w-9 h-9 rounded-xl flex items-center justify-center text-lg', recordVisual(r).bg]">
+                  {{ recordVisual(r).emoji }}
+                </div>
+                <span class="text-[10px] text-ink-400 mt-1">{{ fmtTime(r.datetime) }}</span>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm text-ink-700">{{ describe(r) }}</p>
+                <p v-if="r.note" class="text-xs text-ink-400 mt-1">{{ r.note }}</p>
+                <div class="flex items-center gap-1.5 mt-2 text-[10px] text-ink-300">
+                  <span>{{ authorEmoji(r) }}</span>
+                  <span>{{ authorName(r) }}</span>
+                </div>
               </div>
             </div>
           </div>
