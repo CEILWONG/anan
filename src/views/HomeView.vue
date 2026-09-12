@@ -195,7 +195,7 @@ function recordNow(type: string) {
         <div class="text-xs text-ink-400">次喂养</div>
       </div>
       <div class="card text-center py-4">
-        <div class="text-2xl mb-1">�</div>
+        <div class="text-2xl mb-1">🧷</div>
         <div class="text-xl font-serif text-ink-700">{{ lastDiaper || '—' }}</div>
         <div class="text-xs text-ink-400">上次尿布</div>
       </div>

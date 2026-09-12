@@ -116,10 +116,13 @@ const groupedRecords = computed(() => {
 
   return Object.entries(groups)
     .sort(([a], [b]) => b.localeCompare(a))
-    .map(([date, items]) => ({
-      date,
-      items: items.sort((a, b) => b.datetime.localeCompare(a.datetime))
-    }))
+    .map(([date, items]) => {
+      items.sort((a, b) => b.datetime.localeCompare(a.datetime))
+      // 一天拆成两列：上午(0-12) / 下午(12-24)
+      const am = items.filter((r) => dayjs(r.datetime).hour() < 12)
+      const pm = items.filter((r) => dayjs(r.datetime).hour() >= 12)
+      return { date, am, pm }
+    })
 })
 
 function dateLabel(date: string) {
@@ -226,43 +229,88 @@ function describe(r: AnyRecord): string {
             {{ dateLabel(group.date) }} · {{ dayjs(group.date).format('M月D日 dddd') }}
           </h3>
         </div>
-        <div class="space-y-2">
-          <div
-            v-for="r in group.items"
-            :key="r.id"
-            class="relative rounded-2xl overflow-hidden"
-          >
-            <!-- 底层删除按钮 -->
-            <button
-              class="absolute inset-y-0 right-0 w-20 bg-dusk-400 flex items-center justify-center gap-1 text-white text-sm font-medium"
-              @click="deleteOne(r)"
-            >
-              <Trash2 class="w-4 h-4" /> 删除
-            </button>
-            <!-- 记录卡片（左滑） -->
+
+        <div class="grid grid-cols-2 gap-3">
+          <!-- 上午 0-12 -->
+          <div class="space-y-2">
+            <p class="text-[10px] text-ink-400 font-medium">☀️ 上午 (0-12)</p>
             <div
-              class="card flex items-start gap-3 relative transition-transform duration-200"
-              :style="{ transform: `translateX(-${offsetOf(r.id)}px)` }"
-              @touchstart="onTouchStart($event, r)"
-              @touchmove="onTouchMove($event)"
-              @touchend="onTouchEnd(r)"
-              @click="onTap(r)"
+              v-for="r in group.am"
+              :key="r.id"
+              class="relative rounded-xl overflow-hidden"
             >
-              <div class="flex flex-col items-center w-12 flex-shrink-0">
-                <div :class="['w-9 h-9 rounded-xl flex items-center justify-center text-lg', recordVisual(r).bg]">
-                  {{ recordVisual(r).emoji }}
+              <button
+                class="absolute inset-y-0 right-0 w-16 bg-rose-400 flex items-center justify-center"
+                @click="deleteOne(r)"
+                aria-label="删除"
+              >
+                <Trash2 class="w-4 h-4 text-white" />
+              </button>
+              <div
+                class="rounded-xl shadow-sm flex items-start gap-2 p-3 relative transition-transform duration-200"
+                :class="recordVisual(r).bg"
+                :style="{ transform: `translateX(-${offsetOf(r.id)}px)` }"
+                @touchstart="onTouchStart($event, r)"
+                @touchmove="onTouchMove($event)"
+                @touchend="onTouchEnd(r)"
+                @click="onTap(r)"
+              >
+                <div class="flex flex-col items-center w-9 flex-shrink-0">
+                  <span class="text-lg leading-none">{{ recordVisual(r).emoji }}</span>
+                  <span class="text-[9px] text-ink-400 mt-1">{{ fmtTime(r.datetime) }}</span>
                 </div>
-                <span class="text-[10px] text-ink-400 mt-1">{{ fmtTime(r.datetime) }}</span>
-              </div>
-              <div class="flex-1 min-w-0">
-                <p class="text-sm text-ink-700">{{ describe(r) }}</p>
-                <p v-if="r.note" class="text-xs text-ink-400 mt-1">{{ r.note }}</p>
-                <div class="flex items-center gap-1.5 mt-2 text-[10px] text-ink-300">
-                  <span>{{ authorEmoji(r) }}</span>
-                  <span>{{ authorName(r) }}</span>
+                <div class="flex-1 min-w-0">
+                  <p class="text-[13px] text-ink-700">{{ describe(r) }}</p>
+                  <p v-if="r.note" class="text-[11px] text-ink-400 mt-0.5 truncate">{{ r.note }}</p>
+                  <div class="flex items-center gap-1 mt-1 text-[9px] text-ink-300">
+                    <span>{{ authorEmoji(r) }}</span>
+                    <span>{{ authorName(r) }}</span>
+                  </div>
                 </div>
               </div>
             </div>
+            <p v-if="group.am.length === 0" class="text-xs text-ink-300 text-center py-3">无记录</p>
+          </div>
+
+          <!-- 下午 12-24 -->
+          <div class="space-y-2">
+            <p class="text-[10px] text-ink-400 font-medium">🌙 下午 (12-24)</p>
+            <div
+              v-for="r in group.pm"
+              :key="r.id"
+              class="relative rounded-xl overflow-hidden"
+            >
+              <button
+                class="absolute inset-y-0 right-0 w-16 bg-rose-400 flex items-center justify-center"
+                @click="deleteOne(r)"
+                aria-label="删除"
+              >
+                <Trash2 class="w-4 h-4 text-white" />
+              </button>
+              <div
+                class="rounded-xl shadow-sm flex items-start gap-2 p-3 relative transition-transform duration-200"
+                :class="recordVisual(r).bg"
+                :style="{ transform: `translateX(-${offsetOf(r.id)}px)` }"
+                @touchstart="onTouchStart($event, r)"
+                @touchmove="onTouchMove($event)"
+                @touchend="onTouchEnd(r)"
+                @click="onTap(r)"
+              >
+                <div class="flex flex-col items-center w-9 flex-shrink-0">
+                  <span class="text-lg leading-none">{{ recordVisual(r).emoji }}</span>
+                  <span class="text-[9px] text-ink-400 mt-1">{{ fmtTime(r.datetime) }}</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-[13px] text-ink-700">{{ describe(r) }}</p>
+                  <p v-if="r.note" class="text-[11px] text-ink-400 mt-0.5 truncate">{{ r.note }}</p>
+                  <div class="flex items-center gap-1 mt-1 text-[9px] text-ink-300">
+                    <span>{{ authorEmoji(r) }}</span>
+                    <span>{{ authorName(r) }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <p v-if="group.pm.length === 0" class="text-xs text-ink-300 text-center py-3">无记录</p>
           </div>
         </div>
       </div>

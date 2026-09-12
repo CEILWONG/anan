@@ -139,31 +139,43 @@ function renderFeedingBottle() {
     xAxis: { type: 'category', data: days },
     yAxis: { type: 'value', name: 'ml' },
     series: [
-      { name: '奶粉奶量(ml)', type: 'bar', barMaxWidth: 14, itemStyle: { color: '#8ecae6' }, data: by('formula') },
-      { name: '母乳奶量(ml)', type: 'bar', barMaxWidth: 14, itemStyle: { color: '#a4c3a8' }, data: by('pumped') }
+      {
+        name: '奶粉奶量(ml)',
+        type: 'bar',
+        barMaxWidth: 14,
+        itemStyle: { color: '#8ecae6', borderRadius: [2, 2, 0, 0] },
+        label: { show: true, position: 'top', color: '#6b7280', fontSize: 10, formatter: (p: any) => (p.value ? p.value + '' : '') },
+        data: by('formula')
+      },
+      {
+        name: '母乳奶量(ml)',
+        type: 'bar',
+        barMaxWidth: 14,
+        itemStyle: { color: '#a4c3a8', borderRadius: [2, 2, 0, 0] },
+        label: { show: true, position: 'top', color: '#6b7280', fontSize: 10, formatter: (p: any) => (p.value ? p.value + '' : '') },
+        data: by('pumped')
+      }
     ],
     dataZoom: zoomCfg(days)
   })
 }
 
-// ---- 尿布趋势（按天：类型堆积 + 总次数）----
+// ---- 尿布趋势（按天：小便 / 大便堆积，mixed 拆成各一次）----
 function renderDiaper() {
   if (!diaperChartEl.value) return
   const META = [
     { key: 'wet', name: '小便', color: '#8ecae6' },
-    { key: 'dirty', name: '大便', color: '#e3b587' },
-    { key: 'mixed', name: '都有', color: '#c4a7e7' }
+    { key: 'dirty', name: '大便', color: '#e3b587' }
   ]
-  type DayAgg = { wet: number; dirty: number; mixed: number; total: number }
+  type DayAgg = { wet: number; dirty: number }
   const map = new Map<string, DayAgg>()
   recordsStore.forCurrentBaby().filter((r) => r.type === 'diaper').forEach((r) => {
     const day = dayjs(r.datetime).format('MM-DD')
     const d = r as DiaperRecord
-    const cur = map.get(day) || { wet: 0, dirty: 0, mixed: 0, total: 0 }
+    const cur = map.get(day) || { wet: 0, dirty: 0 }
     if (d.diaperType === 'wet') cur.wet++
     else if (d.diaperType === 'dirty') cur.dirty++
-    else cur.mixed++
-    cur.total++
+    else { cur.wet++; cur.dirty++ } // “都有”拆成一次小便 + 一次大便
     map.set(day, cur)
   })
   if (map.size === 0) return
@@ -173,30 +185,19 @@ function renderDiaper() {
   diaperChart = diaperChart || echarts.init(diaperChartEl.value)
   diaperChart.setOption({
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-    legend: { data: ['小便', '大便', '都有', '总次数'], top: 0 },
-    grid: { left: 8, right: 26, top: 32, bottom: days.length > 12 ? 40 : 26, containLabel: true },
+    legend: { data: ['小便', '大便'], top: 0 },
+    grid: { left: 8, right: 8, top: 32, bottom: days.length > 12 ? 40 : 26, containLabel: true },
     xAxis: { type: 'category', data: days },
-    yAxis: [
-      { type: 'value', name: '次' },
-      { type: 'value', name: '次', splitLine: { show: false }, max: (v: any) => Math.max(v.max * 1.2, 1) }
-    ],
-    series: [
-      ...META.map((m) => ({
-        name: m.name,
-        type: 'bar' as const,
-        stack: 'diaper',
-        barMaxWidth: 18,
-        itemStyle: { color: m.color },
-        data: by(m.key as keyof DayAgg)
-      })),
-      { name: '总次数', type: 'line', yAxisIndex: 1, smooth: true, symbol: 'circle', symbolSize: 6, lineStyle: { width: 2.5, color: '#5b8db8' }, itemStyle: { color: '#5b8db8' }, data: by('total') }
-    ],
-    dataZoom: days.length > 12
-      ? [
-          { type: 'inside', start: Math.max(0, 100 - (12 / days.length) * 100), end: 100 },
-          { type: 'slider', bottom: 0, height: 16, start: Math.max(0, 100 - (12 / days.length) * 100), end: 100 }
-        ]
-      : []
+    yAxis: { type: 'value', name: '次' },
+    series: META.map((m) => ({
+      name: m.name,
+      type: 'bar' as const,
+      stack: 'diaper',
+      barMaxWidth: 18,
+      itemStyle: { color: m.color },
+      data: by(m.key as keyof DayAgg)
+    })),
+    dataZoom: zoomCfg(days)
   })
 }
 
@@ -278,15 +279,6 @@ const latestWeightInfo = computed(() =>
         </p>
       </div>
 
-      <!-- 喂养①：亲喂时长 -->
-      <div class="card mb-5">
-        <h3 class="heading-2 mb-3">🤱 亲喂时长</h3>
-        <div ref="feedingBreastEl" class="h-56 w-full" style="display:none"></div>
-        <p v-if="!recordsStore.forCurrentBaby().some((r) => r.type === 'feeding' && (r as any).method === 'breast')" class="text-xs text-ink-400 text-center py-8">
-          还没有亲喂记录
-        </p>
-      </div>
-
       <!-- 喂养②：瓶喂趋势（奶粉 / 母乳） -->
       <div class="card mb-5">
         <h3 class="heading-2 mb-3">🍼 瓶喂趋势</h3>
@@ -302,6 +294,15 @@ const latestWeightInfo = computed(() =>
         <div ref="diaperChartEl" class="h-56 w-full" style="display:none"></div>
         <p v-if="!recordsStore.forCurrentBaby().some((r) => r.type === 'diaper')" class="text-xs text-ink-400 text-center py-8">
           还没有尿布记录
+        </p>
+      </div>
+
+      <!-- 喂养①：亲喂时长 -->
+      <div class="card mb-5">
+        <h3 class="heading-2 mb-3">🤱 亲喂时长</h3>
+        <div ref="feedingBreastEl" class="h-56 w-full" style="display:none"></div>
+        <p v-if="!recordsStore.forCurrentBaby().some((r) => r.type === 'feeding' && (r as any).method === 'breast')" class="text-xs text-ink-400 text-center py-8">
+          还没有亲喂记录
         </p>
       </div>
 

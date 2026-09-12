@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, useRouter, RouterView } from 'vue-router'
-import { Plus, BarChart3, Settings } from 'lucide-vue-next'
+import { ClipboardList, BarChart3, Settings } from 'lucide-vue-next'
 
 const route = useRoute()
 const router = useRouter()
 
 const tabs = [
-  { name: 'record', path: '/', label: '记录', icon: Plus, primary: true },
+  { name: 'record', path: '/', label: '记录', icon: ClipboardList },
   { name: 'charts', path: '/charts', label: '图表', icon: BarChart3 },
   { name: 'settings', path: '/settings', label: '设置', icon: Settings }
 ]
@@ -42,17 +42,12 @@ function go(path: string) {
           :key="t.name"
           @click="go(t.path)"
           :class="[
-            'flex flex-col items-center justify-center gap-0.5 transition-all',
-            t.primary
-              ? 'w-14 h-14 bg-apricot-400 rounded-full text-white -mt-5 shadow-lg shadow-apricot-300/50'
-              : 'w-14 h-12 rounded-xl',
-            currentTab === t.name && !t.primary
-              ? 'text-apricot-500'
-              : !t.primary ? 'text-ink-400' : ''
+            'flex flex-col items-center justify-center gap-0.5 w-14 h-12 rounded-xl transition-all',
+            currentTab === t.name ? 'text-apricot-500' : 'text-ink-400'
           ]"
         >
-          <component :is="t.icon" :class="t.primary ? 'w-6 h-6' : 'w-5 h-5'" />
-          <span v-if="!t.primary" class="text-[10px]">{{ t.label }}</span>
+          <component :is="t.icon" class="w-5 h-5" />
+          <span class="text-[10px]">{{ t.label }}</span>
         </button>
       </div>
     </nav>
