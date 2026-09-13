@@ -163,40 +163,58 @@ function renderFeedingBottle() {
 // ---- 尿布趋势（按天：小便 / 大便堆积，mixed 拆成各一次）----
 function renderDiaper() {
   if (!diaperChartEl.value) return
-  const META = [
-    { key: 'wet', name: '小便', color: '#8ecae6' },
-    { key: 'dirty', name: '大便', color: '#e3b587' }
-  ]
-  type DayAgg = { wet: number; dirty: number }
-  const map = new Map<string, DayAgg>()
+  const WET = '#8ecae6'
+  const DIRTY = '#e3b587'
+
+  // 每天按时间排序的大小便事件（“都有”拆成一次小便 + 一次大便）
+  const dayEvents = new Map<string, { dt: string; type: 'wet' | 'dirty' }[]>()
   recordsStore.forCurrentBaby().filter((r) => r.type === 'diaper').forEach((r) => {
-    const day = dayjs(r.datetime).format('MM-DD')
     const d = r as DiaperRecord
-    const cur = map.get(day) || { wet: 0, dirty: 0 }
-    if (d.diaperType === 'wet') cur.wet++
-    else if (d.diaperType === 'dirty') cur.dirty++
-    else { cur.wet++; cur.dirty++ } // “都有”拆成一次小便 + 一次大便
-    map.set(day, cur)
+    const day = dayjs(r.datetime).format('YYYY-MM-DD')
+    const list = dayEvents.get(day) || []
+    if (d.diaperType === 'wet') list.push({ dt: r.datetime, type: 'wet' })
+    else if (d.diaperType === 'dirty') list.push({ dt: r.datetime, type: 'dirty' })
+    else { list.push({ dt: r.datetime, type: 'wet' }, { dt: r.datetime, type: 'dirty' }) }
+    dayEvents.set(day, list)
   })
-  if (map.size === 0) return
+  if (dayEvents.size === 0) return
   diaperChartEl.value.style.display = 'block'
-  const days = [...map.keys()].sort()
-  const by = (k: keyof DayAgg) => days.map((d) => map.get(d)![k])
+
+  const days = [...dayEvents.keys()].sort()
+  const maxEvents = Math.max(...[...dayEvents.values()].map((l) => l.length))
+  // 每条柱 = 一个时间槽位；某天该槽位有事件则色块置 1，否则为透明 0 占位保持对齐
+  const series = []
+  for (let i = 0; i < maxEvents; i++) {
+    const data = days.map((day) => {
+      const evs = dayEvents.get(day)!
+      if (i < evs.length) {
+        return { value: 1, itemStyle: { color: evs[i].type === 'dirty' ? DIRTY : WET, borderColor: 'rgba(120,100,80,0.35)', borderWidth: 1 } }
+      }
+      return { value: 0, itemStyle: { color: 'transparent', borderWidth: 0 } }
+    })
+    series.push({ name: '', type: 'bar' as const, stack: 'diaper', barMaxWidth: 22, data })
+  }
+
   diaperChart = diaperChart || echarts.init(diaperChartEl.value)
   diaperChart.setOption({
-    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-    legend: { data: ['小便', '大便'], top: 0 },
-    grid: { left: 8, right: 8, top: 32, bottom: days.length > 12 ? 40 : 26, containLabel: true },
-    xAxis: { type: 'category', data: days },
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      formatter: (params: any) => {
+        const day = days[params[0].dataIndex]
+        const evs = dayEvents.get(day) || []
+        const lines = [`<b>${dayjs(day).format('M月D日 dddd')}</b>（共 ${evs.length} 次）`]
+        evs.forEach((ev) => {
+          const t = ev.type === 'dirty' ? '💩 大便' : '💧 小便'
+          lines.push(`${dayjs(ev.dt).format('HH:mm')} ${t}`)
+        })
+        return lines.join('<br/>')
+      }
+    },
+    grid: { left: 8, right: 8, top: 24, bottom: days.length > 12 ? 40 : 26, containLabel: true },
+    xAxis: { type: 'category', data: days, axisLabel: { formatter: (v: string) => dayjs(v).format('MM-DD') } },
     yAxis: { type: 'value', name: '次' },
-    series: META.map((m) => ({
-      name: m.name,
-      type: 'bar' as const,
-      stack: 'diaper',
-      barMaxWidth: 18,
-      itemStyle: { color: m.color },
-      data: by(m.key as keyof DayAgg)
-    })),
+    series,
     dataZoom: zoomCfg(days)
   })
 }

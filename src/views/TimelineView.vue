@@ -196,9 +196,9 @@ function describe(r: AnyRecord): string {
     <div class="flex gap-2 overflow-x-auto pb-3 mb-4 -mx-5 px-5 scrollbar-hide">
       <button
         v-for="f in [
-          { v: 'all', l: '全部' },
           { v: 'feeding', l: '🍼 喂养' },
           { v: 'diaper', l: '🧷 尿布' },
+          { v: 'all', l: '全部' },
           { v: 'weight', l: '⚖️ 体重' },
           { v: 'jaundice', l: '🟡 黄疸' },
           { v: 'milestone', l: '⭐ 里程碑' }
