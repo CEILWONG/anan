@@ -9,7 +9,7 @@ import type { AnyRecord, RecordType, UserRole } from '@/types'
 const recordsStore = useRecordsStore()
 const babyStore = useBabyStore()
 
-const filter = ref<'all' | RecordType>('all')
+const filter = ref<'all' | RecordType>('feeding')
 
 onMounted(async () => {
   await babyStore.loadBabies()
