@@ -33,13 +33,19 @@ onMounted(async () => {
   renderAll()
 })
 
+const DEFAULT_WINDOW = 7 // 默认展示最近 7 天，更早的可通过左滑/拖拽平移回看
 function zoomCfg(days: string[]) {
-  return days.length > 12
-    ? [
-        { type: 'inside', start: Math.max(0, 100 - (12 / days.length) * 100), end: 100 },
-        { type: 'slider', bottom: 0, height: 16, start: Math.max(0, 100 - (12 / days.length) * 100), end: 100 }
-      ]
-    : []
+  if (days.length <= DEFAULT_WINDOW) return []
+  const openRatio = DEFAULT_WINDOW / days.length
+  const start = Math.max(0, (1 - openRatio) * 100)
+  return {
+    type: 'inside',
+    start,
+    end: 100,
+    zoomOnMouseWheel: false,
+    moveOnMouseWheel: true, // 鼠标滚轮平移
+    moveOnMouseMove: true   // 整块区域可拖拽/左滑平移
+  }
 }
 
 function renderAll() {
