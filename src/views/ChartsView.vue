@@ -8,7 +8,7 @@ import { LineChart, BarChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent, LegendComponent, DataZoomComponent, DataZoomInsideComponent, DataZoomSliderComponent } from 'echarts/components'
 import { CanvasRenderer } from 'echarts/renderers'
 import { dayjs } from '@/lib/utils'
-import type { FeedingRecord, DiaperRecord, WeightRecord, MilestoneRecord } from '@/types'
+import type { FeedingRecord, DiaperRecord, WeightRecord, JaundiceRecord, MilestoneRecord } from '@/types'
 
 echarts.use([LineChart, BarChart, GridComponent, TooltipComponent, LegendComponent, DataZoomComponent, DataZoomInsideComponent, DataZoomSliderComponent, CanvasRenderer])
 
@@ -20,11 +20,13 @@ const weightChartEl = ref<HTMLDivElement>()
 const feedingBreastEl = ref<HTMLDivElement>()
 const feedingBottleEl = ref<HTMLDivElement>()
 const diaperChartEl = ref<HTMLDivElement>()
+const jaundiceChartEl = ref<HTMLDivElement>()
 
 let weightChart: echarts.ECharts | null = null
 let feedingBreastChart: echarts.ECharts | null = null
 let feedingBottleChart: echarts.ECharts | null = null
 let diaperChart: echarts.ECharts | null = null
+let jaundiceChart: echarts.ECharts | null = null
 
 onMounted(async () => {
   await babyStore.loadBabies()
@@ -33,23 +35,39 @@ onMounted(async () => {
   renderAll()
 })
 
-const DEFAULT_WINDOW = 7 // 默认展示最近 7 天，更早的可通过左滑/拖拽平移回看
+const DEFAULT_WINDOW = 7 // 默认展示最近 7 天，更早的通过底部滑动条 / 拖拽平移回看
+const hasZoom = (days: string[]) => days.length > DEFAULT_WINDOW
+// 底部留白：出现滑动条时抬高 grid，避免图表被遮住
+function bottomCfg(days: string[]) {
+  return hasZoom(days) ? 52 : days.length > 12 ? 40 : 26
+}
 function zoomCfg(days: string[]) {
-  if (days.length <= DEFAULT_WINDOW) return []
+  if (!hasZoom(days)) return []
   const openRatio = DEFAULT_WINDOW / days.length
   const start = Math.max(0, (1 - openRatio) * 100)
-  return {
-    type: 'inside',
-    start,
-    end: 100,
-    zoomOnMouseWheel: false,
-    moveOnMouseWheel: true, // 鼠标滚轮平移
-    moveOnMouseMove: true   // 整块区域可拖拽/左滑平移
-  }
+  return [
+    {
+      type: 'inside', start, end: 100, // 滚轮 / 触屏手势平移
+      zoomOnMouseWheel: false,
+      moveOnMouseWheel: true,
+      moveOnMouseMove: true
+    },
+    {
+      type: 'slider', start, end: 100, // 底部可视化滑动条：拖动手柄缩放、拖中间平移
+      height: 16,
+      bottom: 6,
+      borderColor: 'rgba(244,162,97,0.35)',
+      backgroundColor: 'rgba(244,162,97,0.08)',
+      fillerColor: 'rgba(244,162,97,0.28)',
+      handleStyle: { color: '#f4a261' },
+      textStyle: { color: '#9c9177', fontSize: 10 }
+    }
+  ]
 }
 
 function renderAll() {
   renderWeight()
+  renderJaundice()
   renderFeedingBreast()
   renderFeedingBottle()
   renderDiaper()
@@ -63,13 +81,14 @@ function renderWeight() {
   ) as WeightRecord[]
   if (recs.length === 0) return
   weightChartEl.value.style.display = 'block'
+  const dates = recs.map((r) => dayjs(r.datetime).format('MM-DD'))
   weightChart = weightChart || echarts.init(weightChartEl.value)
   weightChart.setOption({
     tooltip: { trigger: 'axis' },
-    grid: { left: 8, right: 8, top: 30, bottom: 24, containLabel: true },
+    grid: { left: 8, right: 8, top: 30, bottom: bottomCfg(dates), containLabel: true },
     xAxis: {
       type: 'category',
-      data: recs.map((r) => dayjs(r.datetime).format('MM-DD')),
+      data: dates,
       boundaryGap: false
     },
     yAxis: { type: 'value', name: 'kg', min: (v: any) => Math.floor(v.min - 0.5), scale: true },
@@ -80,7 +99,67 @@ function renderWeight() {
       data: recs.map((r) => r.weightKg),
       areaStyle: { opacity: 0.15 },
       itemStyle: { color: '#f4a261' }
-    }]
+    }],
+    dataZoom: zoomCfg(dates)
+  })
+}
+
+// ---- 黄疸均值曲线（每次测量取头/胸/腹的平均值，mg/dL）----
+function renderJaundice() {
+  if (!jaundiceChartEl.value) return
+  const recs = recordsStore.forCurrentBaby()
+    .filter((r) => r.type === 'jaundice')
+    .sort((a, b) => a.datetime.localeCompare(b.datetime)) as JaundiceRecord[]
+  if (recs.length === 0) return
+  jaundiceChartEl.value.style.display = 'block'
+  const times = recs.map((r) => dayjs(r.datetime).format('MM-DD HH:mm'))
+  // 平均值 = 该次实测部位数值求和 ÷ 部位数，保留 1 位小数
+  const avgs = recs.map((r) => {
+    const vals = [r.faceValue, r.chestValue, r.abdomenValue].filter((v): v is number => typeof v === 'number')
+    if (vals.length === 0) return null
+    return Number((vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1))
+  })
+  jaundiceChart = jaundiceChart || echarts.init(jaundiceChartEl.value)
+  jaundiceChart.setOption({
+    tooltip: {
+      trigger: 'axis',
+      formatter: (params: any) => {
+        const i = params[0].dataIndex
+        const r = recs[i]
+        const lines = [`<b>${dayjs(r.datetime).format('M月D日 HH:mm')}</b>`]
+        if (r.faceValue != null) lines.push(`头部: ${r.faceValue} mg/dL`)
+        if (r.chestValue != null) lines.push(`胸部: ${r.chestValue} mg/dL`)
+        if (r.abdomenValue != null) lines.push(`腹部: ${r.abdomenValue} mg/dL`)
+        if (avgs[i] != null) lines.push(`<b>平均: ${avgs[i]} mg/dL</b>`)
+        return lines.join('<br/>')
+      }
+    },
+    legend: { data: ['黄疸平均值'], top: 0 },
+    grid: { left: 8, right: 8, top: 32, bottom: bottomCfg(times), containLabel: true },
+    xAxis: { type: 'category', data: times, boundaryGap: false, axisLabel: { color: '#9c9177', fontSize: 10 } },
+    yAxis: { type: 'value', name: 'mg/dL', scale: true, min: (v: any) => Math.max(0, Math.floor(v.min - 0.5)) },
+    series: [{
+      name: '黄疸平均值',
+      type: 'line',
+      smooth: true,
+      symbol: 'circle',
+      symbolSize: 7,
+      lineStyle: { width: 2.5, color: '#e0a53e' },
+      itemStyle: { color: '#e0a53e' },
+      areaStyle: { opacity: 0.12 },
+      label: {
+        show: true,
+        position: 'top',
+        color: '#6b7280',
+        fontSize: 10,
+        backgroundColor: 'rgba(255,255,255,0.8)',
+        padding: [2, 4],
+        borderRadius: 3,
+        formatter: (p: any) => (p.value == null ? '' : String(p.value))
+      },
+      data: avgs
+    }],
+    dataZoom: zoomCfg(times)
   })
 }
 
@@ -101,7 +180,7 @@ function renderFeedingBreast() {
   feedingBreastChart.setOption({
     tooltip: { trigger: 'axis' },
     legend: { data: ['亲喂时长(分钟)'], top: 0 },
-    grid: { left: 8, right: 8, top: 32, bottom: days.length > 12 ? 40 : 26, containLabel: true },
+    grid: { left: 8, right: 8, top: 32, bottom: bottomCfg(days), containLabel: true },
     xAxis: { type: 'category', data: days },
     yAxis: { type: 'value', name: '分钟' },
     series: [{
@@ -141,7 +220,7 @@ function renderFeedingBottle() {
   feedingBottleChart.setOption({
     tooltip: { trigger: 'axis' },
     legend: { data: ['奶粉奶量(ml)', '母乳奶量(ml)'], top: 0 },
-    grid: { left: 8, right: 8, top: 32, bottom: days.length > 12 ? 40 : 26, containLabel: true },
+    grid: { left: 8, right: 8, top: 32, bottom: bottomCfg(days), containLabel: true },
     xAxis: { type: 'category', data: days },
     yAxis: { type: 'value', name: 'ml' },
     series: [
@@ -217,7 +296,7 @@ function renderDiaper() {
         return lines.join('<br/>')
       }
     },
-    grid: { left: 8, right: 8, top: 24, bottom: days.length > 12 ? 40 : 26, containLabel: true },
+    grid: { left: 8, right: 8, top: 24, bottom: bottomCfg(days), containLabel: true },
     xAxis: { type: 'category', data: days, axisLabel: { formatter: (v: string) => dayjs(v).format('MM-DD') } },
     yAxis: { type: 'value', name: '次' },
     series,
@@ -300,6 +379,16 @@ const latestWeightInfo = computed(() =>
         <div ref="weightChartEl" class="h-56 w-full" style="display:none"></div>
         <p v-if="!recordsStore.forCurrentBaby().some((r) => r.type === 'weight')" class="text-xs text-ink-400 text-center py-8">
           还没有体重记录
+        </p>
+      </div>
+
+      <!-- 黄疸均值曲线 -->
+      <div class="card mb-5">
+        <h3 class="heading-2 mb-3">🟡 黄疸均值曲线</h3>
+        <p class="text-xs text-ink-400 -mt-2 mb-3">每次测量取头部 / 胸部 / 腹部的平均值（mg/dL），曲线上的数字即平均值</p>
+        <div ref="jaundiceChartEl" class="h-56 w-full" style="display:none"></div>
+        <p v-if="!recordsStore.forCurrentBaby().some((r) => r.type === 'jaundice')" class="text-xs text-ink-400 text-center py-8">
+          还没有黄疸记录
         </p>
       </div>
 
