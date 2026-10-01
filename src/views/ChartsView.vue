@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, nextTick } from 'vue'
+import { ref, reactive, onMounted, computed, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useBabyStore } from '@/stores/baby'
 import { useRecordsStore } from '@/stores/records'
@@ -7,6 +7,7 @@ import * as echarts from 'echarts/core'
 import { LineChart, BarChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent, LegendComponent, DataZoomComponent, DataZoomInsideComponent, DataZoomSliderComponent } from 'echarts/components'
 import { CanvasRenderer } from 'echarts/renderers'
+import { ZoomIn, ZoomOut } from 'lucide-vue-next'
 import { dayjs } from '@/lib/utils'
 import type { FeedingRecord, DiaperRecord, WeightRecord, JaundiceRecord, MilestoneRecord } from '@/types'
 
@@ -28,6 +29,9 @@ let feedingBottleChart: echarts.ECharts | null = null
 let diaperChart: echarts.ECharts | null = null
 let jaundiceChart: echarts.ECharts | null = null
 
+// 各图是否启用了窗口缩放（记录数 > 默认窗口时才有滑动条），用于控制 ＋/− 按钮显示
+const zoomable = reactive<Record<string, boolean>>({})
+
 onMounted(async () => {
   await babyStore.loadBabies()
   await recordsStore.loadAll()
@@ -47,22 +51,43 @@ function zoomCfg(days: string[]) {
   const start = Math.max(0, (1 - openRatio) * 100)
   return [
     {
-      type: 'inside', start, end: 100, // 滚轮 / 触屏手势平移
+      type: 'inside', start, end: 100, // 触屏：单指拖动平移、两指捏合缩放
       zoomOnMouseWheel: false,
+      zoomOnTouch: true,
       moveOnMouseWheel: true,
       moveOnMouseMove: true
     },
     {
-      type: 'slider', start, end: 100, // 底部可视化滑动条：拖动手柄缩放、拖中间平移
-      height: 16,
+      type: 'slider', start, end: 100, // 底部可视化滑动条：拖中间平移窗口、拖两端手柄缩放
+      height: 28, // 加高触控区，手机上更好操作
       bottom: 6,
-      borderColor: 'rgba(244,162,97,0.35)',
-      backgroundColor: 'rgba(244,162,97,0.08)',
-      fillerColor: 'rgba(244,162,97,0.28)',
-      handleStyle: { color: '#f4a261' },
+      borderColor: 'rgba(244,162,97,0.4)',
+      backgroundColor: 'rgba(244,162,97,0.12)',
+      fillerColor: 'rgba(244,162,97,0.32)',
+      handleSize: '140%', // 放大两端手柄，减少误触
+      handleStyle: { color: '#f4a261', borderColor: '#fff', borderWidth: 2 },
+      moveHandleSize: 8, // 中间抓手：拖动它平移窗口
+      showDetail: false,
       textStyle: { color: '#9c9177', fontSize: 10 }
     }
   ]
+}
+
+// ＋/－ 按钮：放大窗口（看得更细）/ 缩小窗口（看得更全），手机上比拖手柄更易操作
+function zoomStep(c: echarts.ECharts | null, dir: 1 | -1) {
+  if (!c) return
+  const dz = (c.getOption().dataZoom || []) as any[]
+  const slider = dz.find((z) => z && z.type === 'slider')
+  if (!slider || typeof slider.start !== 'number' || typeof slider.end !== 'number') return
+  const w = slider.end - slider.start
+  const nextW = Math.min(100, w * (dir === 1 ? 0.8 : 1.25))
+  if (dir === -1 && nextW >= 100) return // 已到全览，无需再缩小
+  const center = (slider.start + slider.end) / 2
+  let s = center - nextW / 2
+  let e = center + nextW / 2
+  if (s < 0) { s = 0; e = nextW }
+  if (e > 100) { e = 100; s = 100 - nextW }
+  c.dispatchAction({ type: 'dataZoom', start: s, end: e })
 }
 
 function renderAll() {
@@ -82,6 +107,7 @@ function renderWeight() {
   if (recs.length === 0) return
   weightChartEl.value.style.display = 'block'
   const dates = recs.map((r) => dayjs(r.datetime).format('MM-DD'))
+  zoomable.weight = hasZoom(dates)
   weightChart = weightChart || echarts.init(weightChartEl.value)
   weightChart.setOption({
     tooltip: { trigger: 'axis' },
@@ -112,7 +138,8 @@ function renderJaundice() {
     .sort((a, b) => a.datetime.localeCompare(b.datetime)) as JaundiceRecord[]
   if (recs.length === 0) return
   jaundiceChartEl.value.style.display = 'block'
-  const times = recs.map((r) => dayjs(r.datetime).format('MM-DD HH:mm'))
+  const dates = recs.map((r) => dayjs(r.datetime).format('MM-DD'))
+  zoomable.jaundice = hasZoom(dates)
   // 平均值 = 该次实测部位数值求和 ÷ 部位数，保留 1 位小数
   const avgs = recs.map((r) => {
     const vals = [r.faceValue, r.chestValue, r.abdomenValue].filter((v): v is number => typeof v === 'number')
@@ -135,8 +162,8 @@ function renderJaundice() {
       }
     },
     legend: { data: ['黄疸平均值'], top: 0 },
-    grid: { left: 8, right: 8, top: 32, bottom: bottomCfg(times), containLabel: true },
-    xAxis: { type: 'category', data: times, boundaryGap: false, axisLabel: { color: '#9c9177', fontSize: 10 } },
+    grid: { left: 8, right: 8, top: 32, bottom: bottomCfg(dates), containLabel: true },
+    xAxis: { type: 'category', data: dates, boundaryGap: false, axisLabel: { color: '#9c9177', fontSize: 10 } },
     yAxis: { type: 'value', name: 'mg/dL', scale: true, min: (v: any) => Math.max(0, Math.floor(v.min - 0.5)) },
     series: [{
       name: '黄疸平均值',
@@ -159,7 +186,7 @@ function renderJaundice() {
       },
       data: avgs
     }],
-    dataZoom: zoomCfg(times)
+    dataZoom: zoomCfg(dates)
   })
 }
 
@@ -176,6 +203,7 @@ function renderFeedingBreast() {
   if (map.size === 0) return
   feedingBreastEl.value.style.display = 'block'
   const days = [...map.keys()].sort()
+  zoomable.breast = hasZoom(days)
   feedingBreastChart = feedingBreastChart || echarts.init(feedingBreastEl.value)
   feedingBreastChart.setOption({
     tooltip: { trigger: 'axis' },
@@ -215,6 +243,7 @@ function renderFeedingBottle() {
   if (map.size === 0) return
   feedingBottleEl.value.style.display = 'block'
   const days = [...map.keys()].sort()
+  zoomable.bottle = hasZoom(days)
   const by = (k: keyof DayAgg) => days.map((d) => map.get(d)![k])
   feedingBottleChart = feedingBottleChart || echarts.init(feedingBottleEl.value)
   feedingBottleChart.setOption({
@@ -266,6 +295,7 @@ function renderDiaper() {
   diaperChartEl.value.style.display = 'block'
 
   const days = [...dayEvents.keys()].sort()
+  zoomable.diaper = hasZoom(days)
   const maxEvents = Math.max(...[...dayEvents.values()].map((l) => l.length))
   // 每条柱 = 一个时间槽位；某天该槽位有事件则色块置 1，否则为透明 0 占位保持对齐
   const series = []
@@ -312,6 +342,16 @@ const milestones = computed(() => {
 })
 
 const hasBaby = computed(() => !!babyStore.currentBaby)
+
+const hasWeight = computed(() => recordsStore.forCurrentBaby().some((r) => r.type === 'weight'))
+const hasJaundice = computed(() => recordsStore.forCurrentBaby().some((r) => r.type === 'jaundice'))
+const hasDiaper = computed(() => recordsStore.forCurrentBaby().some((r) => r.type === 'diaper'))
+const hasBottleFeed = computed(() =>
+  recordsStore.forCurrentBaby().some((r): r is FeedingRecord => r.type === 'feeding' && r.method !== 'breast')
+)
+const hasBreastFeed = computed(() =>
+  recordsStore.forCurrentBaby().some((r): r is FeedingRecord => r.type === 'feeding' && r.method === 'breast')
+)
 
 // 最新一次体重 + 斤两换算
 const latestWeight = computed(() => {
@@ -366,7 +406,13 @@ const latestWeightInfo = computed(() =>
     <template v-else>
       <!-- 体重曲线 -->
       <div class="card mb-5">
-        <h3 class="heading-2 mb-3">⚖️ 体重曲线</h3>
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="heading-2">⚖️ 体重曲线</h3>
+          <div v-if="hasWeight && zoomable.weight" class="flex items-center gap-1.5">
+            <button @click="zoomStep(weightChart, -1)" class="w-8 h-8 rounded-lg bg-white border border-apricot-200 text-apricot-500 flex items-center justify-center shadow-sm active:scale-90 transition" aria-label="缩小窗口"><ZoomOut class="w-4 h-4" /></button>
+            <button @click="zoomStep(weightChart, 1)" class="w-8 h-8 rounded-lg bg-white border border-apricot-200 text-apricot-500 flex items-center justify-center shadow-sm active:scale-90 transition" aria-label="放大窗口"><ZoomIn class="w-4 h-4" /></button>
+          </div>
+        </div>
         <template v-if="latestWeightInfo">
           <div class="flex items-baseline gap-2">
             <span class="text-2xl font-serif text-ink-700">{{ latestWeightInfo.g }} g</span>
@@ -377,44 +423,68 @@ const latestWeightInfo = computed(() =>
           </p>
         </template>
         <div ref="weightChartEl" class="h-56 w-full" style="display:none"></div>
-        <p v-if="!recordsStore.forCurrentBaby().some((r) => r.type === 'weight')" class="text-xs text-ink-400 text-center py-8">
+        <p v-if="!hasWeight" class="text-xs text-ink-400 text-center py-8">
           还没有体重记录
         </p>
       </div>
 
       <!-- 黄疸均值曲线 -->
       <div class="card mb-5">
-        <h3 class="heading-2 mb-3">🟡 黄疸均值曲线</h3>
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="heading-2">🟡 黄疸均值曲线</h3>
+          <div v-if="hasJaundice && zoomable.jaundice" class="flex items-center gap-1.5">
+            <button @click="zoomStep(jaundiceChart, -1)" class="w-8 h-8 rounded-lg bg-white border border-apricot-200 text-apricot-500 flex items-center justify-center shadow-sm active:scale-90 transition" aria-label="缩小窗口"><ZoomOut class="w-4 h-4" /></button>
+            <button @click="zoomStep(jaundiceChart, 1)" class="w-8 h-8 rounded-lg bg-white border border-apricot-200 text-apricot-500 flex items-center justify-center shadow-sm active:scale-90 transition" aria-label="放大窗口"><ZoomIn class="w-4 h-4" /></button>
+          </div>
+        </div>
         <p class="text-xs text-ink-400 -mt-2 mb-3">每次测量取头部 / 胸部 / 腹部的平均值（mg/dL），曲线上的数字即平均值</p>
         <div ref="jaundiceChartEl" class="h-56 w-full" style="display:none"></div>
-        <p v-if="!recordsStore.forCurrentBaby().some((r) => r.type === 'jaundice')" class="text-xs text-ink-400 text-center py-8">
+        <p v-if="!hasJaundice" class="text-xs text-ink-400 text-center py-8">
           还没有黄疸记录
         </p>
       </div>
 
       <!-- 喂养②：瓶喂趋势（奶粉 / 母乳） -->
       <div class="card mb-5">
-        <h3 class="heading-2 mb-3">🍼 瓶喂趋势</h3>
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="heading-2">🍼 瓶喂趋势</h3>
+          <div v-if="hasBottleFeed && zoomable.bottle" class="flex items-center gap-1.5">
+            <button @click="zoomStep(feedingBottleChart, -1)" class="w-8 h-8 rounded-lg bg-white border border-apricot-200 text-apricot-500 flex items-center justify-center shadow-sm active:scale-90 transition" aria-label="缩小窗口"><ZoomOut class="w-4 h-4" /></button>
+            <button @click="zoomStep(feedingBottleChart, 1)" class="w-8 h-8 rounded-lg bg-white border border-apricot-200 text-apricot-500 flex items-center justify-center shadow-sm active:scale-90 transition" aria-label="放大窗口"><ZoomIn class="w-4 h-4" /></button>
+          </div>
+        </div>
         <div ref="feedingBottleEl" class="h-56 w-full" style="display:none"></div>
-        <p v-if="!recordsStore.forCurrentBaby().some((r) => r.type === 'feeding' && (r as any).method !== 'breast')" class="text-xs text-ink-400 text-center py-8">
+        <p v-if="!hasBottleFeed" class="text-xs text-ink-400 text-center py-8">
           还没有瓶喂记录
         </p>
       </div>
 
       <!-- 尿布趋势 -->
       <div class="card mb-5">
-        <h3 class="heading-2 mb-3">🧷 尿布趋势</h3>
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="heading-2">🧷 尿布趋势</h3>
+          <div v-if="hasDiaper && zoomable.diaper" class="flex items-center gap-1.5">
+            <button @click="zoomStep(diaperChart, -1)" class="w-8 h-8 rounded-lg bg-white border border-apricot-200 text-apricot-500 flex items-center justify-center shadow-sm active:scale-90 transition" aria-label="缩小窗口"><ZoomOut class="w-4 h-4" /></button>
+            <button @click="zoomStep(diaperChart, 1)" class="w-8 h-8 rounded-lg bg-white border border-apricot-200 text-apricot-500 flex items-center justify-center shadow-sm active:scale-90 transition" aria-label="放大窗口"><ZoomIn class="w-4 h-4" /></button>
+          </div>
+        </div>
         <div ref="diaperChartEl" class="h-56 w-full" style="display:none"></div>
-        <p v-if="!recordsStore.forCurrentBaby().some((r) => r.type === 'diaper')" class="text-xs text-ink-400 text-center py-8">
+        <p v-if="!hasDiaper" class="text-xs text-ink-400 text-center py-8">
           还没有尿布记录
         </p>
       </div>
 
       <!-- 喂养①：亲喂时长 -->
       <div class="card mb-5">
-        <h3 class="heading-2 mb-3">🤱 亲喂时长</h3>
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="heading-2">🤱 亲喂时长</h3>
+          <div v-if="hasBreastFeed && zoomable.breast" class="flex items-center gap-1.5">
+            <button @click="zoomStep(feedingBreastChart, -1)" class="w-8 h-8 rounded-lg bg-white border border-apricot-200 text-apricot-500 flex items-center justify-center shadow-sm active:scale-90 transition" aria-label="缩小窗口"><ZoomOut class="w-4 h-4" /></button>
+            <button @click="zoomStep(feedingBreastChart, 1)" class="w-8 h-8 rounded-lg bg-white border border-apricot-200 text-apricot-500 flex items-center justify-center shadow-sm active:scale-90 transition" aria-label="放大窗口"><ZoomIn class="w-4 h-4" /></button>
+          </div>
+        </div>
         <div ref="feedingBreastEl" class="h-56 w-full" style="display:none"></div>
-        <p v-if="!recordsStore.forCurrentBaby().some((r) => r.type === 'feeding' && (r as any).method === 'breast')" class="text-xs text-ink-400 text-center py-8">
+        <p v-if="!hasBreastFeed" class="text-xs text-ink-400 text-center py-8">
           还没有亲喂记录
         </p>
       </div>

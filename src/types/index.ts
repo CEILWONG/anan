@@ -4,7 +4,7 @@ export type RecordType = 'feeding' | 'diaper' | 'weight' | 'jaundice' | 'milesto
 
 export type FeedingMethod = 'breast' | 'formula' | 'pumped_milk'
 export type BreastSide = 'left' | 'right' | 'both'
-export type DiaperType = 'wet' | 'dirty' | 'mixed'
+export type DiaperType = 'wet' | 'dirty'
 export type UserRole = 'mom' | 'dad' | 'grandma' | 'grandpa' | 'custom'
 
 // 当前使用者（谁在记录），存 localStorage，无登录

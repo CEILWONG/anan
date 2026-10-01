@@ -19,11 +19,33 @@ const submitting = ref(false)
 
 onMounted(async () => {
   await babyStore.loadBabies()
+  await recordsStore.loadAll()
+  // 默认弹出上一次的记录值和时间，方便补记
+  const last = recordsStore.lastDiaper
+  if (last) {
+    diaperType.value = last.diaperType
+    datetime.value = dayjs(last.datetime).format('YYYY-MM-DDTHH:mm')
+    rash.value = last.rash || false
+    note.value = last.note || ''
+  }
 })
 
+// 快速记录直接记当前时刻，不沿用表单默认值
 async function quickRecord(type: DiaperType) {
-  diaperType.value = type
-  await submit()
+  if (!babyStore.currentBabyId) return
+  submitting.value = true
+  try {
+    await recordsStore.addDiaper({
+      babyId: babyStore.currentBabyId,
+      datetime: new Date().toISOString(),
+      diaperType: type,
+      rash: false,
+      note: undefined
+    })
+    router.back()
+  } finally {
+    submitting.value = false
+  }
 }
 
 async function submit() {
@@ -61,7 +83,7 @@ async function submit() {
       <!-- 快速记录（突出按钮） -->
       <div>
         <label class="label">快速记录</label>
-        <div class="grid grid-cols-3 gap-3">
+        <div class="grid grid-cols-2 gap-3">
           <button
             @click="quickRecord('wet')"
             class="card hover:bg-sage-50 transition flex flex-col items-center py-5 bg-gradient-to-br from-yellow-50 to-cream-100"
@@ -76,29 +98,21 @@ async function submit() {
             <span class="text-4xl mb-2">💩</span>
             <span class="text-sm font-medium text-ink-700">大便</span>
           </button>
-          <button
-            @click="quickRecord('mixed')"
-            class="card hover:bg-dusk-50 transition flex flex-col items-center py-5 bg-gradient-to-br from-dusk-50 to-cream-100"
-          >
-            <span class="text-4xl mb-2">🧷</span>
-            <span class="text-sm font-medium text-ink-700">都有</span>
-          </button>
         </div>
       </div>
 
-      <!-- 详细表单 -->
-      <details class="card cursor-pointer">
+      <!-- 详细表单（默认展开，方便补记） -->
+      <details class="card cursor-pointer" open>
         <summary class="text-sm text-ink-500 font-medium">需要更详细？</summary>
         <div class="mt-4 space-y-4">
           <!-- 类型 -->
           <div>
             <label class="label">类型</label>
-            <div class="grid grid-cols-3 gap-2">
+            <div class="grid grid-cols-2 gap-2">
               <button
                 v-for="t in [
                   { v: 'wet', l: '小便' },
-                  { v: 'dirty', l: '大便' },
-                  { v: 'mixed', l: '都有' }
+                  { v: 'dirty', l: '大便' }
                 ]"
                 :key="t.v"
                 @click="diaperType = t.v as DiaperType"

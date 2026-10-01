@@ -22,6 +22,17 @@ const note = ref('')
 
 onMounted(async () => {
   await babyStore.loadBabies()
+  await recordsStore.loadAll()
+  // 默认弹出上一次的记录值和时间，方便补记
+  const last = recordsStore.lastFeeding
+  if (last) {
+    method.value = last.method
+    datetime.value = dayjs(last.datetime).format('YYYY-MM-DDTHH:mm')
+    if (last.durationMin != null) durationMin.value = last.durationMin
+    if (last.side) side.value = last.side
+    if (last.amountMl != null) amountMl.value = last.amountMl
+    note.value = last.note || ''
+  }
 })
 
 const canSubmit = computed(() => {

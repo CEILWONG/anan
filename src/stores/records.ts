@@ -57,13 +57,29 @@ export const useRecordsStore = defineStore('records', () => {
   })
 
   // 最近的喂养
-  const lastFeeding = computed(() => {
+  const lastFeeding = computed<FeedingRecord | null>(() => {
     const babyStore = useBabyStore()
     const bid = babyStore.currentBabyId
     if (!bid) return null
     return (
       records.value
-        .filter((r) => r.babyId === bid && r.type === 'feeding')
+        .filter(
+          (r): r is FeedingRecord => r.babyId === bid && r.type === 'feeding'
+        )
+        .sort((a, b) => b.datetime.localeCompare(a.datetime))[0] || null
+    )
+  })
+
+  // 最近的尿布
+  const lastDiaper = computed<DiaperRecord | null>(() => {
+    const babyStore = useBabyStore()
+    const bid = babyStore.currentBabyId
+    if (!bid) return null
+    return (
+      records.value
+        .filter(
+          (r): r is DiaperRecord => r.babyId === bid && r.type === 'diaper'
+        )
         .sort((a, b) => b.datetime.localeCompare(a.datetime))[0] || null
     )
   })
@@ -129,6 +145,7 @@ export const useRecordsStore = defineStore('records', () => {
     loading,
     todaySummary,
     lastFeeding,
+    lastDiaper,
     loadAll,
     forCurrentBaby,
     addRecord,
