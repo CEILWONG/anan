@@ -404,46 +404,6 @@ const latestWeightInfo = computed(() =>
     </div>
 
     <template v-else>
-      <!-- 体重曲线 -->
-      <div class="card mb-5">
-        <div class="flex items-center justify-between mb-3">
-          <h3 class="heading-2">⚖️ 体重曲线</h3>
-          <div v-if="hasWeight && zoomable.weight" class="flex items-center gap-1.5">
-            <button @click="zoomStep(weightChart, -1)" class="w-8 h-8 rounded-lg bg-white border border-apricot-200 text-apricot-500 flex items-center justify-center shadow-sm active:scale-90 transition" aria-label="缩小窗口"><ZoomOut class="w-4 h-4" /></button>
-            <button @click="zoomStep(weightChart, 1)" class="w-8 h-8 rounded-lg bg-white border border-apricot-200 text-apricot-500 flex items-center justify-center shadow-sm active:scale-90 transition" aria-label="放大窗口"><ZoomIn class="w-4 h-4" /></button>
-          </div>
-        </div>
-        <template v-if="latestWeightInfo">
-          <div class="flex items-baseline gap-2">
-            <span class="text-2xl font-serif text-ink-700">{{ latestWeightInfo.g }} g</span>
-            <span class="text-base text-apricot-500 font-medium">{{ latestWeightInfo.jinLabel }}</span>
-          </div>
-          <p class="text-xs text-ink-400 mt-1 mb-3">
-            {{ dayjs(latestWeight?.datetime).format('YYYY-MM-DD HH:mm') }} · 最新一次
-          </p>
-        </template>
-        <div ref="weightChartEl" class="h-56 w-full" style="display:none"></div>
-        <p v-if="!hasWeight" class="text-xs text-ink-400 text-center py-8">
-          还没有体重记录
-        </p>
-      </div>
-
-      <!-- 黄疸均值曲线 -->
-      <div class="card mb-5">
-        <div class="flex items-center justify-between mb-3">
-          <h3 class="heading-2">🟡 黄疸均值曲线</h3>
-          <div v-if="hasJaundice && zoomable.jaundice" class="flex items-center gap-1.5">
-            <button @click="zoomStep(jaundiceChart, -1)" class="w-8 h-8 rounded-lg bg-white border border-apricot-200 text-apricot-500 flex items-center justify-center shadow-sm active:scale-90 transition" aria-label="缩小窗口"><ZoomOut class="w-4 h-4" /></button>
-            <button @click="zoomStep(jaundiceChart, 1)" class="w-8 h-8 rounded-lg bg-white border border-apricot-200 text-apricot-500 flex items-center justify-center shadow-sm active:scale-90 transition" aria-label="放大窗口"><ZoomIn class="w-4 h-4" /></button>
-          </div>
-        </div>
-        <p class="text-xs text-ink-400 -mt-2 mb-3">每次测量取头部 / 胸部 / 腹部的平均值（mg/dL），曲线上的数字即平均值</p>
-        <div ref="jaundiceChartEl" class="h-56 w-full" style="display:none"></div>
-        <p v-if="!hasJaundice" class="text-xs text-ink-400 text-center py-8">
-          还没有黄疸记录
-        </p>
-      </div>
-
       <!-- 喂养②：瓶喂趋势（奶粉 / 母乳） -->
       <div class="card mb-5">
         <div class="flex items-center justify-between mb-3">
@@ -486,6 +446,46 @@ const latestWeightInfo = computed(() =>
         <div ref="feedingBreastEl" class="h-56 w-full" style="display:none"></div>
         <p v-if="!hasBreastFeed" class="text-xs text-ink-400 text-center py-8">
           还没有亲喂记录
+        </p>
+      </div>
+
+      <!-- 体重曲线 -->
+      <div class="card mb-5">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="heading-2">⚖️ 体重曲线</h3>
+          <div v-if="hasWeight && zoomable.weight" class="flex items-center gap-1.5">
+            <button @click="zoomStep(weightChart, -1)" class="w-8 h-8 rounded-lg bg-white border border-apricot-200 text-apricot-500 flex items-center justify-center shadow-sm active:scale-90 transition" aria-label="缩小窗口"><ZoomOut class="w-4 h-4" /></button>
+            <button @click="zoomStep(weightChart, 1)" class="w-8 h-8 rounded-lg bg-white border border-apricot-200 text-apricot-500 flex items-center justify-center shadow-sm active:scale-90 transition" aria-label="放大窗口"><ZoomIn class="w-4 h-4" /></button>
+          </div>
+        </div>
+        <template v-if="latestWeightInfo">
+          <div class="flex items-baseline gap-2">
+            <span class="text-2xl font-serif text-ink-700">{{ latestWeightInfo.g }} g</span>
+            <span class="text-base text-apricot-500 font-medium">{{ latestWeightInfo.jinLabel }}</span>
+          </div>
+          <p class="text-xs text-ink-400 mt-1 mb-3">
+            {{ dayjs(latestWeight?.datetime).format('YYYY-MM-DD HH:mm') }} · 最新一次
+          </p>
+        </template>
+        <div ref="weightChartEl" class="h-56 w-full" style="display:none"></div>
+        <p v-if="!hasWeight" class="text-xs text-ink-400 text-center py-8">
+          还没有体重记录
+        </p>
+      </div>
+
+      <!-- 黄疸均值曲线 -->
+      <div class="card mb-5">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="heading-2">🟡 黄疸均值曲线</h3>
+          <div v-if="hasJaundice && zoomable.jaundice" class="flex items-center gap-1.5">
+            <button @click="zoomStep(jaundiceChart, -1)" class="w-8 h-8 rounded-lg bg-white border border-apricot-200 text-apricot-500 flex items-center justify-center shadow-sm active:scale-90 transition" aria-label="缩小窗口"><ZoomOut class="w-4 h-4" /></button>
+            <button @click="zoomStep(jaundiceChart, 1)" class="w-8 h-8 rounded-lg bg-white border border-apricot-200 text-apricot-500 flex items-center justify-center shadow-sm active:scale-90 transition" aria-label="放大窗口"><ZoomIn class="w-4 h-4" /></button>
+          </div>
+        </div>
+        <p class="text-xs text-ink-400 -mt-2 mb-3">每次测量取头部 / 胸部 / 腹部的平均值（mg/dL），曲线上的数字即平均值</p>
+        <div ref="jaundiceChartEl" class="h-56 w-full" style="display:none"></div>
+        <p v-if="!hasJaundice" class="text-xs text-ink-400 text-center py-8">
+          还没有黄疸记录
         </p>
       </div>
 
