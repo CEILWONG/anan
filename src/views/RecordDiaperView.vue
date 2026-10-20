@@ -20,33 +20,14 @@ const submitting = ref(false)
 onMounted(async () => {
   await babyStore.loadBabies()
   await recordsStore.loadAll()
-  // 默认弹出上一次的记录值和时间，方便补记
+  // 默认时间为打开时刻减 5 分钟，备注默认留空；类型和红屁屁沿用上次记录
   const last = recordsStore.lastDiaper
   if (last) {
     diaperType.value = last.diaperType
-    datetime.value = dayjs(last.datetime).format('YYYY-MM-DDTHH:mm')
     rash.value = last.rash || false
-    note.value = last.note || ''
   }
+  datetime.value = dayjs().subtract(5, 'minute').format('YYYY-MM-DDTHH:mm')
 })
-
-// 快速记录直接记当前时刻，不沿用表单默认值
-async function quickRecord(type: DiaperType) {
-  if (!babyStore.currentBabyId) return
-  submitting.value = true
-  try {
-    await recordsStore.addDiaper({
-      babyId: babyStore.currentBabyId,
-      datetime: new Date().toISOString(),
-      diaperType: type,
-      rash: false,
-      note: undefined
-    })
-    router.back()
-  } finally {
-    submitting.value = false
-  }
-}
 
 async function submit() {
   if (!babyStore.currentBabyId) return
@@ -80,90 +61,63 @@ async function submit() {
     </div>
 
     <div class="px-5 space-y-5 max-w-md mx-auto">
-      <!-- 快速记录（突出按钮） -->
+      <!-- 类型 -->
       <div>
-        <label class="label">快速记录</label>
-        <div class="grid grid-cols-2 gap-3">
+        <label class="label">类型</label>
+        <div class="grid grid-cols-2 gap-2">
           <button
-            @click="quickRecord('wet')"
-            class="card hover:bg-sage-50 transition flex flex-col items-center py-5 bg-gradient-to-br from-yellow-50 to-cream-100"
+            v-for="t in [
+              { v: 'wet', l: '小便' },
+              { v: 'dirty', l: '大便' }
+            ]"
+            :key="t.v"
+            @click="diaperType = t.v as DiaperType"
+            :class="[
+              'py-2 rounded-xl text-xs transition border',
+              diaperType === t.v
+              ? 'bg-sage-50 border-sage-300 text-sage-500 font-medium'
+              : 'bg-white border-cream-200 text-ink-500'
+            ]"
           >
-            <span class="text-4xl mb-2">💧</span>
-            <span class="text-sm font-medium text-ink-700">小便</span>
-          </button>
-          <button
-            @click="quickRecord('dirty')"
-            class="card hover:bg-apricot-50 transition flex flex-col items-center py-5 bg-gradient-to-br from-apricot-50 to-cream-100"
-          >
-            <span class="text-4xl mb-2">💩</span>
-            <span class="text-sm font-medium text-ink-700">大便</span>
+            {{ t.l }}
           </button>
         </div>
       </div>
 
-      <!-- 详细表单（默认展开，方便补记） -->
-      <details class="card cursor-pointer" open>
-        <summary class="text-sm text-ink-500 font-medium">需要更详细？</summary>
-        <div class="mt-4 space-y-4">
-          <!-- 类型 -->
-          <div>
-            <label class="label">类型</label>
-            <div class="grid grid-cols-2 gap-2">
-              <button
-                v-for="t in [
-                  { v: 'wet', l: '小便' },
-                  { v: 'dirty', l: '大便' }
-                ]"
-                :key="t.v"
-                @click="diaperType = t.v as DiaperType"
-                :class="[
-                  'py-2 rounded-xl text-xs transition border',
-                  diaperType === t.v
-                  ? 'bg-sage-50 border-sage-300 text-sage-500 font-medium'
-                  : 'bg-white border-cream-200 text-ink-500'
-                ]"
-              >
-                {{ t.l }}
-              </button>
-            </div>
-          </div>
+      <!-- 时间 -->
+      <div>
+        <label class="label">时间</label>
+        <input v-model="datetime" type="datetime-local" class="input" />
+      </div>
 
-          <!-- 时间 -->
-          <div>
-            <label class="label">时间</label>
-            <input v-model="datetime" type="datetime-local" class="input" />
-          </div>
+      <!-- 红屁屁 -->
+      <div>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" v-model="rash" class="w-4 h-4 accent-dusk-300" />
+          <span class="text-sm text-ink-600">有红屁屁</span>
+        </label>
+      </div>
 
-          <!-- 红屁屁 -->
-          <div>
-            <label class="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" v-model="rash" class="w-4 h-4 accent-dusk-300" />
-              <span class="text-sm text-ink-600">有红屁屁</span>
-            </label>
-          </div>
+      <!-- 备注 -->
+      <div>
+        <label class="label">备注（可选）</label>
+        <textarea
+          v-model="note"
+          class="input min-h-[60px] resize-none"
+          placeholder="比如：颜色、形状..."
+          maxlength="200"
+        ></textarea>
+      </div>
 
-          <!-- 备注 -->
-          <div>
-            <label class="label">备注（可选）</label>
-            <textarea
-              v-model="note"
-              class="input min-h-[60px] resize-none"
-              placeholder="比如：颜色、形状..."
-              maxlength="200"
-            ></textarea>
-          </div>
-
-          <button
-            @click="submit"
-            :disabled="submitting"
-            class="btn-primary w-full flex items-center justify-center gap-2"
-          >
-            <Loader2 v-if="submitting" class="w-4 h-4 animate-spin" />
-            <Check v-else class="w-4 h-4" />
-            保存
-          </button>
-        </div>
-      </details>
+      <button
+        @click="submit"
+        :disabled="submitting"
+        class="btn-primary w-full flex items-center justify-center gap-2"
+      >
+        <Loader2 v-if="submitting" class="w-4 h-4 animate-spin" />
+        <Check v-else class="w-4 h-4" />
+        保存
+      </button>
     </div>
   </div>
 </template>
