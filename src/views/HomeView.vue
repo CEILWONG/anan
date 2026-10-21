@@ -4,8 +4,8 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useBabyStore } from '@/stores/baby'
 import { useRecordsStore } from '@/stores/records'
-import { ageOf, fmtTime, dayjs } from '@/lib/utils'
-import { Milk, Scale, Sun, Star, Plus, ChevronDown, Cake, Camera, Baby as BabyIcon, RefreshCw, Calendar } from 'lucide-vue-next'
+import { fmtTime, dayjs } from '@/lib/utils'
+import { Milk, Scale, Sun, Star, Plus, ChevronDown, Camera, Baby as BabyIcon, RefreshCw, Calendar } from 'lucide-vue-next'
 import { ROLE_EMOJI, type UserRole } from '@/types'
 
 const router = useRouter()
@@ -65,21 +65,9 @@ const lastDiaper = computed(() => {
 
 const ageText = computed(() => {
   if (!currentBaby.value) return ''
-  const days = daysAlive.value
-  if (days === 0) return '今天刚出生'
-  if (days === 1) return '出生 1 天'
-  return ageOf(currentBaby.value.birthday)
-})
-
-const daysAlive = computed(() => {
-  if (!currentBaby.value) return 0
-  return dayjs().diff(dayjs(currentBaby.value.birthday), 'day')
-})
-
-const daysAliveLabel = computed(() => {
-  const days = daysAlive.value
-  if (days === 0) return '第 0 天'
-  return `第 ${days} 天`
+  const months = dayjs().diff(dayjs(currentBaby.value.birthday), 'month')
+  const days = dayjs().diff(dayjs(currentBaby.value.birthday), 'day')
+  return `已满${months}个月 · 第${days}天`
 })
 
 const greeting = computed(() => {
@@ -136,11 +124,12 @@ function recordNow(type: string) {
       <div class="absolute -right-8 -top-8 w-32 h-32 bg-white/30 rounded-full blur-2xl"></div>
       <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-dusk-100/40 rounded-full blur-2xl"></div>
 
-      <div class="relative flex items-start justify-between">
-        <div class="flex items-center gap-3">
+      <div class="relative flex items-center justify-between gap-3">
+        <!-- 左：宝宝头像 + 年龄 -->
+        <div class="flex flex-col items-center gap-1.5">
           <button
             @click="router.push(`/baby/${currentBaby.id}/edit`)"
-            class="relative w-16 h-16 rounded-2xl bg-white/70 flex items-center justify-center text-4xl overflow-hidden group"
+            class="relative w-20 h-20 rounded-2xl bg-white/70 flex items-center justify-center text-5xl overflow-hidden group"
             aria-label="修改宝宝信息和头像"
           >
             <img v-if="currentBaby.avatar" :src="currentBaby.avatar" class="w-full h-full object-cover" alt="头像" />
@@ -156,17 +145,10 @@ function recordNow(type: string) {
               <Camera class="w-3 h-3 text-white" />
             </span>
           </button>
-          <div>
-            <p class="text-xs text-ink-400 mb-0.5">Hi，{{ currentBaby.name }}</p>
-            <h1 class="text-2xl font-serif text-ink-700 mb-1">{{ currentBaby.name }}</h1>
-            <div class="flex items-center gap-2 text-xs text-ink-500">
-              <Cake class="w-3.5 h-3.5" />
-              <span>{{ ageText }}{{ daysAliveLabel ? ` · ${daysAliveLabel}` : '' }}</span>
-            </div>
-          </div>
+          <p class="text-xs text-ink-500 whitespace-nowrap">{{ ageText }}</p>
         </div>
-        <!-- 当天日期 -->
-        <div class="flex-1 flex justify-center self-center px-2">
+        <!-- 中：当天日期 -->
+        <div class="flex-1 flex justify-center px-2">
           <span
             class="inline-flex items-center gap-1.5 bg-white/60 backdrop-blur-sm rounded-full px-3 py-1.5 shadow-sm"
           >
@@ -174,9 +156,10 @@ function recordNow(type: string) {
             <span class="text-sm font-medium text-ink-600 whitespace-nowrap">{{ todayDate }}</span>
           </span>
         </div>
+        <!-- 右：刷新按钮 -->
         <button
           @click="refresh"
-          class="w-10 h-10 bg-apricot-400 hover:bg-apricot-500 rounded-full flex items-center justify-center text-white shadow-md shadow-apricot-300/60 transition-transform duration-200 hover:scale-105 active:scale-90"
+          class="w-11 h-11 bg-apricot-400 hover:bg-apricot-500 rounded-full flex items-center justify-center text-white shadow-md shadow-apricot-300/60 transition-transform duration-200 hover:scale-105 active:scale-90"
           aria-label="刷新页面"
         >
           <RefreshCw class="w-5 h-5" />
