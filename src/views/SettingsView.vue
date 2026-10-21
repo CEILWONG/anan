@@ -11,11 +11,9 @@ import {
   Upload,
   Edit3,
   Check,
-  Trash2,
   Loader2,
   UserRoundCog
 } from 'lucide-vue-next'
-import { dbApi } from '@/lib/db'
 import { getPasskey, setPasskey } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth'
 import { ROLE_LABELS, ROLE_PASSWORDS } from '@/types'
@@ -91,19 +89,6 @@ async function importData(e: Event) {
     importing.value = false
     target.value = ''
   }
-}
-
-async function clearData() {
-  const ok1 = window.confirm(
-    '⚠️ 这将永久删除所有宝宝档案和全部记录，无法恢复！\n\n建议先备份。确定继续吗？'
-  )
-  if (!ok1) return
-  await dbApi.clearAll()
-  // 清空当前选中的 baby id
-  localStorage.removeItem('anan-current-baby')
-  await babyStore.loadBabies()
-  await recordsStore.loadAll()
-  showMessage('所有数据已清除')
 }
 
 const count = computed(() => ({
@@ -278,23 +263,6 @@ async function switchRole() {
             />
           </label>
         </div>
-      </div>
-
-      <!-- 危险区 -->
-      <div>
-        <h3 class="text-xs text-ink-400 mb-2 uppercase tracking-wide">危险操作</h3>
-        <button
-          @click="clearData"
-          class="card w-full flex items-center gap-3 text-left text-dusk-400 hover:bg-dusk-50/40"
-        >
-          <div class="w-9 h-9 bg-dusk-50 rounded-xl flex items-center justify-center">
-            <Trash2 class="w-4 h-4" />
-          </div>
-          <div class="flex-1">
-            <p class="text-sm">清除所有数据</p>
-            <p class="text-xs text-ink-400">不可恢复，请先备份</p>
-          </div>
-        </button>
       </div>
 
       <!-- 关于 -->
