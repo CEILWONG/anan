@@ -23,7 +23,7 @@ const note = ref('')
 onMounted(async () => {
   await babyStore.loadBabies()
   await recordsStore.loadAll()
-  // 默认时间为开始记录时刻减 10 分钟，备注默认留空；其余字段沿用上次记录
+  // 默认时间为开始记录时刻减 5 分钟，备注默认留空；其余字段沿用上次记录
   const last = recordsStore.lastFeeding
   if (last) {
     method.value = last.method
@@ -31,7 +31,7 @@ onMounted(async () => {
     if (last.side) side.value = last.side
     if (last.amountMl != null) amountMl.value = last.amountMl
   }
-  datetime.value = dayjs().subtract(10, 'minute').format('YYYY-MM-DDTHH:mm')
+  datetime.value = dayjs().subtract(5, 'minute').format('YYYY-MM-DDTHH:mm')
 })
 
 const canSubmit = computed(() => {

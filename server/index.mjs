@@ -90,10 +90,13 @@ app.use(express.json({ limit: '5mb' }))
 app.get('/api/health', (req, res) => res.json({ ok: true }))
 
 // ---- 口令鉴权 ----
+// 除 PASSKEY 外，同时接受家庭角色口令：820（妈妈）/ 2026（爸爸）
+const ROLE_KEYS = new Set(['820', '2026'])
 app.use('/api', (req, res, next) => {
   if (!PASSKEY) return next() // 未配置口令 → 放行
   const key = req.get('x-access-key')
   if (key === PASSKEY) return next()
+  if (ROLE_KEYS.has(key)) return next()
   res.status(401).json({ error: 'unauthorized' })
 })
 

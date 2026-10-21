@@ -11,14 +11,20 @@ import {
   Upload,
   Edit3,
   Check,
-  Trash2
+  Trash2,
+  Loader2,
+  UserRoundCog
 } from 'lucide-vue-next'
 import { dbApi } from '@/lib/db'
+import { getPasskey, setPasskey } from '@/lib/api'
+import { useAuthStore } from '@/stores/auth'
+import { ROLE_LABELS, ROLE_PASSWORDS } from '@/types'
 
 const router = useRouter()
 const userStore = useUserStore()
 const babyStore = useBabyStore()
 const recordsStore = useRecordsStore()
+const authStore = useAuthStore()
 
 const exporting = ref(false)
 const importing = ref(false)
@@ -104,6 +110,34 @@ const count = computed(() => ({
   babies: babyStore.babies.length,
   records: recordsStore.records.length
 }))
+
+// ---- 身份切换 ----
+const roleKey = ref('')
+const switchingRole = ref(false)
+const roleLabel = computed(() => ROLE_LABELS[userStore.user.role] || '家人')
+
+async function switchRole() {
+  const k = roleKey.value.trim()
+  if (!k || switchingRole.value) return
+  const matched = ROLE_PASSWORDS[k]
+  if (!matched) {
+    showMessage('口令无效，仅支持 820（妈妈）或 2026（爸爸）', 'error')
+    return
+  }
+  const prev = getPasskey()
+  switchingRole.value = true
+  const ok = await authStore.login(k)
+  switchingRole.value = false
+  if (ok) {
+    roleKey.value = ''
+    await recordsStore.loadAll()
+    showMessage(`已切换为 ${matched.name}`)
+  } else {
+    // login 失败会清掉口令，这里恢复原口令避免会话掉线
+    setPasskey(prev)
+    showMessage(authStore.error || '口令不正确，请重试', 'error')
+  }
+}
 </script>
 
 <template>
@@ -154,7 +188,7 @@ const count = computed(() => ({
                 @keyup.enter="saveName"
               />
               <p class="text-xs text-ink-400 mt-0.5">
-                {{ count.babies }} 个宝宝 · {{ count.records }} 条记录
+                {{ roleLabel }} · {{ count.babies }} 个宝宝 · {{ count.records }} 条记录
               </p>
             </div>
             <button
@@ -170,6 +204,40 @@ const count = computed(() => ({
               class="w-8 h-8 bg-sage-100 hover:bg-sage-200 rounded-lg flex items-center justify-center"
             >
               <Check class="w-4 h-4 text-sage-500" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 身份切换 -->
+      <div>
+        <h3 class="text-xs text-ink-400 mb-2 uppercase tracking-wide">身份切换</h3>
+        <div class="card space-y-3">
+          <div class="flex items-center gap-3">
+            <div class="w-11 h-11 bg-cream-200 rounded-2xl flex items-center justify-center">
+              <UserRoundCog class="w-5 h-5 text-ink-500" />
+            </div>
+            <div class="flex-1">
+              <p class="text-sm text-ink-700">当前身份：{{ userStore.user.name }}（{{ roleLabel }}）</p>
+              <p class="text-xs text-ink-400 mt-0.5">输入口令即可切换为妈妈或爸爸</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <input
+              v-model="roleKey"
+              type="password"
+              class="input flex-1 text-sm"
+              placeholder="输入 820 或 2026"
+              maxlength="20"
+              @keyup.enter="switchRole"
+            />
+            <button
+              @click="switchRole"
+              :disabled="switchingRole || !roleKey.trim()"
+              class="px-4 py-2.5 bg-apricot-400 text-white rounded-xl text-sm font-medium disabled:opacity-40 flex items-center gap-1.5 whitespace-nowrap"
+            >
+              <Loader2 v-if="switchingRole" class="w-4 h-4 animate-spin" />
+              切换
             </button>
           </div>
         </div>

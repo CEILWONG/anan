@@ -2,6 +2,15 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { getPasskey, setPasskey, clearPasskey, getData, UnauthorizedError } from '@/lib/api'
+import { ROLE_PASSWORDS } from '@/types'
+import { useUserStore } from './user'
+
+// 按登录口令设置身份（820 → 安安妈妈，2026 → 安安爸爸）
+function applyRoleFromKey(key: string) {
+  const matched = ROLE_PASSWORDS[key]
+  if (!matched) return
+  useUserStore().apply({ name: matched.name, role: matched.role })
+}
 
 export const useAuthStore = defineStore('auth', () => {
   const authed = ref(false)
@@ -14,6 +23,7 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       await getData() // 已存口令且正确则通过
       authed.value = true
+      applyRoleFromKey(getPasskey())
     } catch (e) {
       if (e instanceof UnauthorizedError) authed.value = false
       else {
@@ -31,6 +41,7 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       await getData()
       authed.value = true
+      applyRoleFromKey(key.trim())
       return true
     } catch (e) {
       clearPasskey()

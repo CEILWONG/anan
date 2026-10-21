@@ -147,3 +147,9 @@ export const ROLE_EMOJI: Record<UserRole, string> = {
   grandpa: '👴',
   custom: '🙂'
 }
+
+// 家庭角色口令：用口令登录 / 在设置里切换身份
+export const ROLE_PASSWORDS: Record<string, { name: string; role: UserRole }> = {
+  '820': { name: '安安妈妈', role: 'mom' },
+  '2026': { name: '安安爸爸', role: 'dad' }
+}

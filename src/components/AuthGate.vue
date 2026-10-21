@@ -31,6 +31,7 @@ async function submit() {
         @keyup.enter="submit"
       />
       <p v-if="auth.error" class="text-xs text-dusk-400 mb-3">{{ auth.error }}</p>
+      <p class="text-xs text-ink-300 mb-3">妈妈口令 820 · 爸爸口令 2026</p>
       <button
         @click="submit"
         :disabled="submitting || !key.trim()"

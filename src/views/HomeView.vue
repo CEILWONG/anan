@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useBabyStore } from '@/stores/baby'
 import { useRecordsStore } from '@/stores/records'
 import { ageOf, fmtTime, dayjs } from '@/lib/utils'
-import { Milk, Scale, Sun, Star, Plus, ChevronDown, Cake, Camera, Baby as BabyIcon } from 'lucide-vue-next'
+import { Milk, Scale, Sun, Star, Plus, ChevronDown, Cake, Camera, Baby as BabyIcon, RefreshCw } from 'lucide-vue-next'
+import { ROLE_EMOJI, type UserRole } from '@/types'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -16,6 +17,23 @@ onMounted(async () => {
   await babyStore.loadBabies()
   await recordsStore.loadAll()
 })
+
+// 手动刷新最新数据
+const refreshing = ref(false)
+async function refresh() {
+  if (refreshing.value) return
+  refreshing.value = true
+  try {
+    await babyStore.loadBabies()
+    await recordsStore.loadAll()
+  } finally {
+    refreshing.value = false
+  }
+}
+
+function authorEmoji(r: any) {
+  return ROLE_EMOJI[(r.authorRole || 'custom') as UserRole] || '🙂'
+}
 
 const currentBaby = computed(() => babyStore.currentBaby)
 const summary = computed(() => recordsStore.todaySummary)
@@ -144,6 +162,14 @@ function recordNow(type: string) {
             </div>
           </div>
         </div>
+        <button
+          @click="refresh"
+          :disabled="refreshing"
+          class="w-10 h-10 bg-white/70 hover:bg-white rounded-xl flex items-center justify-center shadow-sm transition"
+          aria-label="刷新数据"
+        >
+          <RefreshCw :class="['w-4 h-4 text-ink-500', refreshing && 'animate-spin']" />
+        </button>
       </div>
 
       <button
@@ -262,7 +288,7 @@ function recordNow(type: string) {
               </template>
             </p>
             <p v-if="r.note" class="text-xs text-ink-400 truncate mt-0.5">{{ r.note }}</p>
-            <p v-if="r.author" class="text-[10px] text-ink-300 mt-0.5">{{ r.author }} 记</p>
+            <p v-if="r.author" class="text-[10px] text-ink-300 mt-0.5">{{ authorEmoji(r) }} {{ r.author }} 记</p>
           </div>
           <div class="text-xs text-ink-300">
             {{ fmtTime(r.datetime) }}

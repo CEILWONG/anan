@@ -13,18 +13,16 @@ const recordsStore = useRecordsStore()
 
 const diaperType = ref<DiaperType>('wet')
 const datetime = ref(dayjs().format('YYYY-MM-DDTHH:mm'))
-const rash = ref(false)
 const note = ref('')
 const submitting = ref(false)
 
 onMounted(async () => {
   await babyStore.loadBabies()
   await recordsStore.loadAll()
-  // 默认时间为打开时刻减 5 分钟，备注默认留空；类型和红屁屁沿用上次记录
+  // 默认时间为打开时刻减 5 分钟，备注默认留空；类型沿用上次记录
   const last = recordsStore.lastDiaper
   if (last) {
     diaperType.value = last.diaperType
-    rash.value = last.rash || false
   }
   datetime.value = dayjs().subtract(5, 'minute').format('YYYY-MM-DDTHH:mm')
 })
@@ -37,7 +35,6 @@ async function submit() {
       babyId: babyStore.currentBabyId,
       datetime: new Date(datetime.value).toISOString(),
       diaperType: diaperType.value,
-      rash: rash.value,
       note: note.value.trim() || undefined
     })
     router.back()
@@ -88,14 +85,6 @@ async function submit() {
       <div>
         <label class="label">时间</label>
         <input v-model="datetime" type="datetime-local" class="input" />
-      </div>
-
-      <!-- 红屁屁 -->
-      <div>
-        <label class="flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" v-model="rash" class="w-4 h-4 accent-dusk-300" />
-          <span class="text-sm text-ink-600">有红屁屁</span>
-        </label>
       </div>
 
       <!-- 备注 -->

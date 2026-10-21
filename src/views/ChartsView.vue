@@ -9,6 +9,7 @@ import { GridComponent, TooltipComponent, LegendComponent, DataZoomComponent, Da
 import { CanvasRenderer } from 'echarts/renderers'
 import { ZoomIn, ZoomOut } from 'lucide-vue-next'
 import { dayjs } from '@/lib/utils'
+import { ROLE_EMOJI, type UserRole } from '@/types'
 import type { FeedingRecord, DiaperRecord, WeightRecord, JaundiceRecord, MilestoneRecord } from '@/types'
 
 echarts.use([LineChart, BarChart, GridComponent, TooltipComponent, LegendComponent, DataZoomComponent, DataZoomInsideComponent, DataZoomSliderComponent, CanvasRenderer])
@@ -341,6 +342,10 @@ const milestones = computed(() => {
     .sort((a, b) => (b as MilestoneRecord).achievedAt.localeCompare((a as MilestoneRecord).achievedAt)) as MilestoneRecord[]
 })
 
+function authorEmoji(r: { authorRole?: UserRole }) {
+  return ROLE_EMOJI[(r.authorRole || 'custom') as UserRole] || '🙂'
+}
+
 const hasBaby = computed(() => !!babyStore.currentBaby)
 
 const hasWeight = computed(() => recordsStore.forCurrentBaby().some((r) => r.type === 'weight'))
@@ -498,6 +503,7 @@ const latestWeightInfo = computed(() =>
             <p class="text-sm font-medium text-ink-700">{{ m.title }}</p>
             <p class="text-[11px] text-ink-400 mt-0.5">{{ dayjs(m.achievedAt).format('YYYY-MM-DD') }}</p>
             <p v-if="m.description" class="text-xs text-ink-500 mt-1">{{ m.description }}</p>
+            <p v-if="m.author" class="text-[11px] text-ink-300 mt-1">{{ authorEmoji(m) }} {{ m.author }} 记</p>
           </div>
         </div>
         <p v-else class="text-xs text-ink-400 text-center py-6">还没有里程碑记录</p>
