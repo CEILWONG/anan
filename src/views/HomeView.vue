@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useBabyStore } from '@/stores/baby'
 import { useRecordsStore } from '@/stores/records'
+import { dbApi } from '@/lib/db'
 import { ageOf, fmtTime, dayjs } from '@/lib/utils'
 import { Milk, Scale, Sun, Star, Plus, ChevronDown, Cake, Camera, Baby as BabyIcon, RefreshCw } from 'lucide-vue-next'
 import { ROLE_EMOJI, type UserRole } from '@/types'
@@ -25,6 +26,8 @@ async function refresh() {
   refreshing.value = true
   const start = Date.now()
   try {
+    // 先强制从服务器拉最新数据（绕开 db.ts 的内存缓存），再刷新 store
+    await dbApi.refresh()
     await babyStore.loadBabies()
     await recordsStore.loadAll()
   } finally {
@@ -51,17 +54,20 @@ const lastFeeding = computed(() => {
   return fmtTime(recs[0].datetime)
 })
 
-// 最新一次黄疸平均值（头/胸/腹已填的值取平均）
-const jaundiceAvg = computed(() => {
-  const recs = recordsStore.forCurrentBaby().filter((r) => r.type === 'jaundice')
-  if (recs.length === 0) return '—'
-  recs.sort((a, b) => b.datetime.localeCompare(a.datetime))
-  const j = recs[0] as any
-  const vals = [j.faceValue, j.chestValue, j.abdomenValue].filter(
-    (v: any) => typeof v === 'number' && !Number.isNaN(v)
-  )
-  if (vals.length === 0) return '—'
-  return (vals.reduce((a: number, b: number) => a + b, 0) / vals.length).toFixed(1)
+// 今日瓶喂总量（奶粉 + 瓶喂母乳，不含亲喂）
+const todayBottleMl = computed(() => {
+  const today = dayjs().startOf('day').toISOString()
+  const tomorrow = dayjs().endOf('day').toISOString()
+  return recordsStore
+    .forCurrentBaby()
+    .filter(
+      (r) =>
+        r.type === 'feeding' &&
+        r.datetime >= today &&
+        r.datetime <= tomorrow &&
+        (r as any).method !== 'breast'
+    )
+    .reduce((acc, r) => acc + ((r as any).amountMl || 0), 0)
 })
 
 // 上一次换尿布的时间
@@ -222,23 +228,23 @@ function recordNow(type: string) {
     <div v-if="currentBaby" class="grid grid-cols-4 gap-3 mb-6">
       <div class="card text-center py-4">
         <div class="text-2xl mb-1">🍼</div>
-        <div class="text-xl font-serif text-ink-700">{{ summary.feeding }}</div>
-        <div class="text-xs text-ink-400">次喂养</div>
-      </div>
-      <div class="card text-center py-4">
-        <div class="text-2xl mb-1">🧷</div>
-        <div class="text-xl font-serif text-ink-700">{{ lastDiaper || '—' }}</div>
-        <div class="text-xs text-ink-400">上次尿布</div>
-      </div>
-      <div class="card text-center py-4">
-        <div class="text-2xl mb-1">🟡</div>
-        <div class="text-xl font-serif text-ink-700">{{ jaundiceAvg }}</div>
-        <div class="text-xs text-ink-400">黄疸均值</div>
+        <div class="text-xl font-serif text-ink-700">{{ todayBottleMl }}</div>
+        <div class="text-xs text-ink-400">今日瓶喂(ml)</div>
       </div>
       <div class="card text-center py-4">
         <div class="text-2xl mb-1">⏱️</div>
         <div class="text-xl font-serif text-ink-700">{{ lastFeeding || '—' }}</div>
-        <div class="text-xs text-ink-400">上次喂</div>
+        <div class="text-xs text-ink-400">上次喂养</div>
+      </div>
+      <div class="card text-center py-4">
+        <div class="text-2xl mb-1">🧷</div>
+        <div class="text-xl font-serif text-ink-700">{{ summary.diaper }}</div>
+        <div class="text-xs text-ink-400">今日尿布(次)</div>
+      </div>
+      <div class="card text-center py-4">
+        <div class="text-2xl mb-1">🕐</div>
+        <div class="text-xl font-serif text-ink-700">{{ lastDiaper || '—' }}</div>
+        <div class="text-xs text-ink-400">上次尿布</div>
       </div>
     </div>
 
