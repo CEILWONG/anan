@@ -23,11 +23,16 @@ const refreshing = ref(false)
 async function refresh() {
   if (refreshing.value) return
   refreshing.value = true
+  const start = Date.now()
   try {
     await babyStore.loadBabies()
     await recordsStore.loadAll()
   } finally {
-    refreshing.value = false
+    // 数据加载太快时也让旋转动画至少播 600ms，反馈更明显
+    const wait = Math.max(0, 600 - (Date.now() - start))
+    setTimeout(() => {
+      refreshing.value = false
+    }, wait)
   }
 }
 
@@ -165,10 +170,10 @@ function recordNow(type: string) {
         <button
           @click="refresh"
           :disabled="refreshing"
-          class="w-10 h-10 bg-white/70 hover:bg-white rounded-xl flex items-center justify-center shadow-sm transition"
+          class="w-10 h-10 bg-apricot-400 hover:bg-apricot-500 rounded-full flex items-center justify-center text-white shadow-md shadow-apricot-300/60 transition-transform duration-200 hover:scale-105 active:scale-90"
           aria-label="刷新数据"
         >
-          <RefreshCw :class="['w-4 h-4 text-ink-500', refreshing && 'animate-spin']" />
+          <RefreshCw :class="['w-5 h-5', refreshing && 'animate-spin']" />
         </button>
       </div>
 
