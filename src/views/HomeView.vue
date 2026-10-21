@@ -125,36 +125,34 @@ function recordNow(type: string) {
       <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-dusk-100/40 rounded-full blur-2xl"></div>
 
       <div class="relative flex items-center justify-between gap-3">
-        <!-- 左：宝宝头像 + 年龄 -->
-        <div class="flex flex-col items-center gap-1.5">
-          <button
-            @click="router.push(`/baby/${currentBaby.id}/edit`)"
-            class="relative w-20 h-20 rounded-2xl bg-white/70 flex items-center justify-center text-5xl overflow-hidden group"
-            aria-label="修改宝宝信息和头像"
+        <!-- 左：宝宝头像（加大，带白色描边） -->
+        <button
+          @click="router.push(`/baby/${currentBaby.id}/edit`)"
+          class="relative w-24 h-24 rounded-3xl bg-white/70 flex items-center justify-center text-6xl overflow-hidden group ring-4 ring-white/80 shadow-xl shadow-apricot-200/50"
+          aria-label="修改宝宝信息和头像"
+        >
+          <img v-if="currentBaby.avatar" :src="currentBaby.avatar" class="w-full h-full object-cover" alt="头像" />
+          <span v-else>{{ currentBaby.gender === 'girl' ? '👧' : '👦' }}</span>
+          <span
+            class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition flex items-center justify-center"
           >
-            <img v-if="currentBaby.avatar" :src="currentBaby.avatar" class="w-full h-full object-cover" alt="头像" />
-            <span v-else>{{ currentBaby.gender === 'girl' ? '👧' : '👦' }}</span>
-            <span
-              class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition flex items-center justify-center"
-            >
-              <Camera class="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition" />
-            </span>
-            <span
-              class="absolute bottom-0.5 right-0.5 w-5 h-5 bg-apricot-400 rounded-full flex items-center justify-center shadow"
-            >
-              <Camera class="w-3 h-3 text-white" />
-            </span>
-          </button>
-          <p class="text-xs text-ink-500 whitespace-nowrap">{{ ageText }}</p>
-        </div>
-        <!-- 中：当天日期 -->
-        <div class="flex-1 flex justify-center px-2">
+            <Camera class="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition" />
+          </span>
+          <span
+            class="absolute bottom-1 right-1 w-6 h-6 bg-apricot-400 rounded-full flex items-center justify-center shadow"
+          >
+            <Camera class="w-3.5 h-3.5 text-white" />
+          </span>
+        </button>
+        <!-- 中：当天日期 + 月龄天数（上下两行） -->
+        <div class="flex-1 flex flex-col items-center gap-2 px-2">
           <span
             class="inline-flex items-center gap-1.5 bg-white/60 backdrop-blur-sm rounded-full px-3 py-1.5 shadow-sm"
           >
             <Calendar class="w-3.5 h-3.5 text-apricot-500" />
             <span class="text-sm font-medium text-ink-600 whitespace-nowrap">{{ todayDate }}</span>
           </span>
+          <p class="text-xs text-ink-500 whitespace-nowrap">{{ ageText }}</p>
         </div>
         <!-- 右：刷新按钮 -->
         <button
