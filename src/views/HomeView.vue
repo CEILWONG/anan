@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useBabyStore } from '@/stores/baby'
 import { useRecordsStore } from '@/stores/records'
-import { dbApi } from '@/lib/db'
 import { ageOf, fmtTime, dayjs } from '@/lib/utils'
 import { Milk, Scale, Sun, Star, Plus, ChevronDown, Cake, Camera, Baby as BabyIcon, RefreshCw } from 'lucide-vue-next'
 import { ROLE_EMOJI, type UserRole } from '@/types'
@@ -19,24 +18,10 @@ onMounted(async () => {
   await recordsStore.loadAll()
 })
 
-// 手动刷新最新数据
-const refreshing = ref(false)
-async function refresh() {
-  if (refreshing.value) return
-  refreshing.value = true
-  const start = Date.now()
-  try {
-    // 先强制从服务器拉最新数据（绕开 db.ts 的内存缓存），再刷新 store
-    await dbApi.refresh()
-    await babyStore.loadBabies()
-    await recordsStore.loadAll()
-  } finally {
-    // 数据加载太快时也让旋转动画至少播 600ms，反馈更明显
-    const wait = Math.max(0, 600 - (Date.now() - start))
-    setTimeout(() => {
-      refreshing.value = false
-    }, wait)
-  }
+// 手动刷新：整页重新加载，等效于浏览器 F5
+// 既能拉取服务器最新数据，也能加载最新前端代码（静态资源带 hash，会命中新版本）
+function refresh() {
+  window.location.reload()
 }
 
 function authorEmoji(r: any) {
@@ -109,6 +94,13 @@ const greeting = computed(() => {
 
 const showBabyPicker = computed(() => babyStore.babies.length > 1)
 
+// 当天日期（10月22日 周三）
+const todayDate = computed(() => {
+  const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+  const d = dayjs()
+  return `${d.month() + 1}月${d.date()}日 ${weekdays[d.day()]}`
+})
+
 function changeBaby() {
   const list = babyStore.babies
   if (list.length < 2) return
@@ -173,13 +165,17 @@ function recordNow(type: string) {
             </div>
           </div>
         </div>
+        <!-- 当天日期 -->
+        <div class="flex-1 flex flex-col items-center self-center text-center px-2">
+          <p class="text-[10px] text-ink-400 mb-0.5">今天</p>
+          <p class="text-sm font-medium text-ink-600 whitespace-nowrap">{{ todayDate }}</p>
+        </div>
         <button
           @click="refresh"
-          :disabled="refreshing"
           class="w-10 h-10 bg-apricot-400 hover:bg-apricot-500 rounded-full flex items-center justify-center text-white shadow-md shadow-apricot-300/60 transition-transform duration-200 hover:scale-105 active:scale-90"
-          aria-label="刷新数据"
+          aria-label="刷新页面"
         >
-          <RefreshCw :class="['w-5 h-5', refreshing && 'animate-spin']" />
+          <RefreshCw class="w-5 h-5" />
         </button>
       </div>
 
