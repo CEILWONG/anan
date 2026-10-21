@@ -1,6 +1,6 @@
 services:
   anan:
-    image: ceilwong/anan:latest
+    image: crpi-kzg7c834f6x5pnu3.cn-hangzhou.personal.cr.aliyuncs.com/ceilwong/anan:latest
     container_name: anan
     restart: unless-stopped
     environment:
