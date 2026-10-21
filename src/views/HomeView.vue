@@ -5,7 +5,7 @@ import { useUserStore } from '@/stores/user'
 import { useBabyStore } from '@/stores/baby'
 import { useRecordsStore } from '@/stores/records'
 import { ageOf, fmtTime, dayjs } from '@/lib/utils'
-import { Milk, Scale, Sun, Star, Plus, ChevronDown, Cake, Camera, Baby as BabyIcon, RefreshCw } from 'lucide-vue-next'
+import { Milk, Scale, Sun, Star, Plus, ChevronDown, Cake, Camera, Baby as BabyIcon, RefreshCw, Calendar } from 'lucide-vue-next'
 import { ROLE_EMOJI, type UserRole } from '@/types'
 
 const router = useRouter()
@@ -98,7 +98,7 @@ const showBabyPicker = computed(() => babyStore.babies.length > 1)
 const todayDate = computed(() => {
   const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
   const d = dayjs()
-  return `${d.month() + 1}月${d.date()}日 ${weekdays[d.day()]}`
+  return `${d.month() + 1}月${d.date()}日 · ${weekdays[d.day()]}`
 })
 
 function changeBaby() {
@@ -166,9 +166,13 @@ function recordNow(type: string) {
           </div>
         </div>
         <!-- 当天日期 -->
-        <div class="flex-1 flex flex-col items-center self-center text-center px-2">
-          <p class="text-[10px] text-ink-400 mb-0.5">今天</p>
-          <p class="text-sm font-medium text-ink-600 whitespace-nowrap">{{ todayDate }}</p>
+        <div class="flex-1 flex justify-center self-center px-2">
+          <span
+            class="inline-flex items-center gap-1.5 bg-white/60 backdrop-blur-sm rounded-full px-3 py-1.5 shadow-sm"
+          >
+            <Calendar class="w-3.5 h-3.5 text-apricot-500" />
+            <span class="text-sm font-medium text-ink-600 whitespace-nowrap">{{ todayDate }}</span>
+          </span>
         </div>
         <button
           @click="refresh"
