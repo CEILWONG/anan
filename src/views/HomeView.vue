@@ -209,8 +209,10 @@ function recordNow(type: string) {
     <div v-if="currentBaby" class="grid grid-cols-4 gap-3 mb-6">
       <div class="card text-center py-4">
         <div class="text-2xl mb-1">🍼</div>
-        <div class="text-xl font-serif text-ink-700">{{ todayBottleMl }}</div>
-        <div class="text-xs text-ink-400">今日瓶喂(ml)</div>
+        <div class="text-xl font-serif text-ink-700">
+          {{ todayBottleMl }}<span class="text-xs font-normal text-ink-400 ml-0.5">ml</span>
+        </div>
+        <div class="text-xs text-ink-400">今日瓶喂</div>
       </div>
       <div class="card text-center py-4">
         <div class="text-2xl mb-1">⏱️</div>
@@ -219,8 +221,10 @@ function recordNow(type: string) {
       </div>
       <div class="card text-center py-4">
         <div class="text-2xl mb-1">🧷</div>
-        <div class="text-xl font-serif text-ink-700">{{ summary.diaper }}</div>
-        <div class="text-xs text-ink-400">今日尿布(次)</div>
+        <div class="text-xl font-serif text-ink-700">
+          {{ summary.diaper }}<span class="text-xs font-normal text-ink-400 ml-0.5">次</span>
+        </div>
+        <div class="text-xs text-ink-400">今日尿布</div>
       </div>
       <div class="card text-center py-4">
         <div class="text-2xl mb-1">🕐</div>
