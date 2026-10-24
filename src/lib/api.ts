@@ -1,5 +1,5 @@
 // HTTP 客户端 + 访问口令管理
-import type { Baby, AnyRecord } from '@/types'
+import type { Baby, AnyRecord, UserRole } from '@/types'
 
 export const PASSKEY_KEY = 'anan_passkey'
 
@@ -28,9 +28,14 @@ export interface ServerData {
   babies: Baby[]
   records: AnyRecord[]
 }
+export interface AccessUser {
+  name: string
+  role: UserRole
+}
 export interface GetDataResp {
   data: ServerData
   version: number
+  user?: AccessUser | null
 }
 export interface PutDataResp {
   data: ServerData

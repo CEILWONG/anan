@@ -16,7 +16,7 @@ import {
 } from 'lucide-vue-next'
 import { getPasskey, setPasskey } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth'
-import { ROLE_LABELS, ROLE_PASSWORDS } from '@/types'
+import { ROLE_LABELS } from '@/types'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -104,19 +104,14 @@ const roleLabel = computed(() => ROLE_LABELS[userStore.user.role] || '家人')
 async function switchRole() {
   const k = roleKey.value.trim()
   if (!k || switchingRole.value) return
-  const matched = ROLE_PASSWORDS[k]
-  if (!matched) {
-    showMessage('口令无效，仅支持 820（妈妈）或 2026（爸爸）', 'error')
-    return
-  }
   const prev = getPasskey()
   switchingRole.value = true
-  const ok = await authStore.login(k)
+  const res = await authStore.login(k)
   switchingRole.value = false
-  if (ok) {
+  if (res.ok) {
     roleKey.value = ''
     await recordsStore.loadAll()
-    showMessage(`已切换为 ${matched.name}`)
+    showMessage(res.user ? `已切换为 ${res.user.name}` : '口令有效，但未绑定身份')
   } else {
     // login 失败会清掉口令，这里恢复原口令避免会话掉线
     setPasskey(prev)
@@ -212,7 +207,7 @@ async function switchRole() {
               v-model="roleKey"
               type="password"
               class="input flex-1 text-sm"
-              placeholder="输入 820 或 2026"
+              placeholder="输入身份口令"
               maxlength="20"
               @keyup.enter="switchRole"
             />

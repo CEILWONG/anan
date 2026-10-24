@@ -90,20 +90,32 @@ app.use(express.json({ limit: '5mb' }))
 app.get('/api/health', (req, res) => res.json({ ok: true }))
 
 // ---- 口令鉴权 ----
-// 除 PASSKEY 外，同时接受家庭角色口令：820（妈妈）/ 2026（爸爸）
-const ROLE_KEYS = new Set(['820', '2026'])
+// 除 PASSKEY 外，同时接受家庭角色口令（仅后端持有，不下发到前端）
+const ROLE_USERS = {
+  '820': { name: '安安妈妈', role: 'mom' },
+  '2026': { name: '安安爸爸', role: 'dad' }
+}
 app.use('/api', (req, res, next) => {
   if (!PASSKEY) return next() // 未配置口令 → 放行
   const key = req.get('x-access-key')
   if (key === PASSKEY) return next()
-  if (ROLE_KEYS.has(key)) return next()
+  const user = ROLE_USERS[key]
+  if (user) {
+    req.accessUser = user
+    return next()
+  }
   res.status(401).json({ error: 'unauthorized' })
 })
 
 // ---- 数据接口 ----
 app.get('/api/data', (req, res) => {
   const s = readState()
-  res.json({ data: { babies: s.babies, records: s.records }, version: s.version })
+  res.json({
+    data: { babies: s.babies, records: s.records },
+    version: s.version,
+    // 由后端根据口令判定身份，前端无需知道口令与身份的对应关系
+    user: req.accessUser || null
+  })
 })
 
 app.put('/api/data', (req, res) => {

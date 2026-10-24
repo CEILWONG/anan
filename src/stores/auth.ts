@@ -1,15 +1,20 @@
 // 访问口令鉴权 store
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { getPasskey, setPasskey, clearPasskey, getData, UnauthorizedError } from '@/lib/api'
-import { ROLE_PASSWORDS } from '@/types'
+import {
+  getPasskey,
+  setPasskey,
+  clearPasskey,
+  getData,
+  UnauthorizedError,
+  type AccessUser
+} from '@/lib/api'
 import { useUserStore } from './user'
 
-// 按登录口令设置身份（820 → 安安妈妈，2026 → 安安爸爸）
-function applyRoleFromKey(key: string) {
-  const matched = ROLE_PASSWORDS[key]
-  if (!matched) return
-  useUserStore().apply({ name: matched.name, role: matched.role })
+// 身份由后端根据口令返回，前端不持有口令与身份的对应关系
+function applyServerUser(user: AccessUser | null | undefined) {
+  if (!user) return
+  useUserStore().apply({ name: user.name, role: user.role })
 }
 
 export const useAuthStore = defineStore('auth', () => {
@@ -21,9 +26,9 @@ export const useAuthStore = defineStore('auth', () => {
     checking.value = true
     error.value = ''
     try {
-      await getData() // 已存口令且正确则通过
+      const resp = await getData() // 已存口令且正确则通过
       authed.value = true
-      applyRoleFromKey(getPasskey())
+      applyServerUser(resp.user)
     } catch (e) {
       if (e instanceof UnauthorizedError) authed.value = false
       else {
@@ -35,19 +40,20 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function login(key: string) {
+  async function login(key: string): Promise<{ ok: boolean; user: AccessUser | null }> {
     error.value = ''
     setPasskey(key.trim())
     try {
-      await getData()
+      const resp = await getData()
       authed.value = true
-      applyRoleFromKey(key.trim())
-      return true
+      const user = resp.user || null
+      applyServerUser(user)
+      return { ok: true, user }
     } catch (e) {
       clearPasskey()
       if (e instanceof UnauthorizedError) error.value = '口令不正确，请重试'
       else error.value = (e as Error).message
-      return false
+      return { ok: false, user: null }
     }
   }
 
