@@ -427,7 +427,7 @@ const latestWeightInfo = computed(() =>
       <!-- 尿布趋势 -->
       <div class="card mb-5">
         <div class="flex items-center justify-between mb-3">
-          <h3 class="heading-2">🧷 尿布趋势</h3>
+          <h3 class="heading-2">🧻 尿布趋势</h3>
           <div v-if="hasDiaper && zoomable.diaper" class="flex items-center gap-1.5">
             <button @click="zoomStep(diaperChart, -1)" class="w-8 h-8 rounded-lg bg-white border border-apricot-200 text-apricot-500 flex items-center justify-center shadow-sm active:scale-90 transition" aria-label="缩小窗口"><ZoomOut class="w-4 h-4" /></button>
             <button @click="zoomStep(diaperChart, 1)" class="w-8 h-8 rounded-lg bg-white border border-apricot-200 text-apricot-500 flex items-center justify-center shadow-sm active:scale-90 transition" aria-label="放大窗口"><ZoomIn class="w-4 h-4" /></button>

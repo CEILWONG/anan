@@ -52,7 +52,7 @@ async function submit() {
         <ArrowLeft class="w-4 h-4 text-ink-500" />
       </button>
       <div>
-        <h1 class="heading-1 text-xl">🧷 换尿布</h1>
+        <h1 class="heading-1 text-xl">🧻 换尿布</h1>
         <p class="text-xs text-ink-400">给 {{ babyStore.currentBaby?.name || '宝宝' }} 记一笔</p>
       </div>
     </div>

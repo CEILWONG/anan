@@ -220,7 +220,7 @@ function recordNow(type: string) {
         <div class="text-xs text-ink-400">上次喂养</div>
       </div>
       <div class="card text-center py-4">
-        <div class="text-2xl mb-1">🧷</div>
+        <div class="text-2xl mb-1">🧻</div>
         <div class="text-xl font-serif text-ink-700">
           {{ summary.diaper }}<span class="text-xs font-normal text-ink-400 ml-0.5">次</span>
         </div>
@@ -249,7 +249,7 @@ function recordNow(type: string) {
         >
           <div class="text-xl">
             <span v-if="r.type === 'feeding'">🍼</span>
-            <span v-else-if="r.type === 'diaper'">🧷</span>
+            <span v-else-if="r.type === 'diaper'">🧻</span>
             <span v-else-if="r.type === 'weight'">⚖️</span>
             <span v-else-if="r.type === 'jaundice'">🟡</span>
             <span v-else-if="r.type === 'milestone'">⭐</span>

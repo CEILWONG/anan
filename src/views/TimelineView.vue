@@ -87,7 +87,7 @@ function recordVisual(r: AnyRecord) {
     case 'diaper': {
       const t = (r as any).diaperType
       if (t === 'dirty') return { emoji: '💩', bg: 'bg-amber-100' }
-      if (t === 'mixed') return { emoji: '🧷', bg: 'bg-purple-100' }
+      if (t === 'mixed') return { emoji: '🧻', bg: 'bg-purple-100' }
       return { emoji: '💧', bg: 'bg-sky-100' }
     }
     case 'weight': return { emoji: '⚖️', bg: 'bg-dusk-100' }
@@ -197,7 +197,7 @@ function describe(r: AnyRecord): string {
       <button
         v-for="f in [
           { v: 'feeding', l: '🍼 喂养' },
-          { v: 'diaper', l: '🧷 尿布' },
+          { v: 'diaper', l: '🧻 尿布' },
           { v: 'all', l: '全部' },
           { v: 'weight', l: '⚖️ 体重' },
           { v: 'jaundice', l: '🟡 黄疸' },

@@ -107,7 +107,7 @@ export const RECORD_TYPE_META: Record<RecordType, RecordTypeMeta> = {
     label: '换尿布',
     icon: 'Baby',
     color: 'sage',
-    emoji: '🧷'
+    emoji: '🧻'
   },
   weight: {
     type: 'weight',
