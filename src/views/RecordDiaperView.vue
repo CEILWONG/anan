@@ -24,7 +24,7 @@ onMounted(async () => {
   if (last) {
     diaperType.value = last.diaperType
   }
-  datetime.value = dayjs().subtract(5, 'minute').format('YYYY-MM-DDTHH:mm')
+  datetime.value = dayjs().subtract(3, 'minute').format('YYYY-MM-DDTHH:mm')
 })
 
 async function submit() {

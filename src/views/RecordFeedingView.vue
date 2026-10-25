@@ -31,7 +31,7 @@ onMounted(async () => {
     if (last.side) side.value = last.side
     if (last.amountMl != null) amountMl.value = last.amountMl
   }
-  datetime.value = dayjs().subtract(5, 'minute').format('YYYY-MM-DDTHH:mm')
+  datetime.value = dayjs().subtract(3, 'minute').format('YYYY-MM-DDTHH:mm')
 })
 
 const canSubmit = computed(() => {
