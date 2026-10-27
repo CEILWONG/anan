@@ -207,9 +207,7 @@ function recordNow(type: string) {
           'transition-all duration-200'
         ]"
       >
-        <div class="w-8 h-8 rounded-[10px] bg-white/85 shadow-sm ring-1 ring-black/[0.03] flex items-center justify-center">
-          <component :is="item.icon" :class="['w-4 h-4', item.text]" />
-        </div>
+        <component :is="item.icon" :class="['w-5 h-5', item.text]" />
         <span class="text-[11px] font-medium text-ink-600">{{ item.label }}</span>
       </button>
     </div>
