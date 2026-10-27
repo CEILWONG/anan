@@ -201,38 +201,42 @@ function recordNow(type: string) {
         @click="recordNow(item.type)"
         :class="[
           item.from,
-          'bg-gradient-to-b to-white rounded-2xl flex flex-col items-center justify-center gap-1 py-2',
+          'bg-gradient-to-b to-white rounded-2xl flex flex-col items-center justify-center gap-1.5 py-3.5',
           'ring-1 ring-inset ring-black/[0.04] shadow-[0_2px_8px_-2px_rgba(45,42,34,0.08)]',
           'hover:shadow-[0_8px_16px_-6px_rgba(45,42,34,0.18)] hover:-translate-y-0.5 active:scale-95',
           'transition-all duration-200'
         ]"
       >
-        <component :is="item.icon" :class="['w-5 h-5', item.text]" />
+        <component :is="item.icon" :class="['w-6 h-6', item.text]" />
         <span class="text-[11px] font-medium text-ink-600">{{ item.label }}</span>
       </button>
     </div>
 
     <!-- 今日统计 -->
-    <div v-if="currentBaby" class="grid grid-cols-4 gap-2 mb-5">
-      <div class="bg-white rounded-2xl ring-1 ring-inset ring-black/[0.04] shadow-[0_1px_3px_rgba(45,42,34,0.05)] px-1 pt-2.5 pb-2 text-center">
-        <div class="text-lg font-serif font-medium text-ink-700 leading-none">
-          {{ todayBottleMl }}<span class="text-[10px] font-normal text-ink-400 ml-0.5">ml</span>
+    <div v-if="currentBaby" class="grid grid-cols-4 gap-3 mb-5">
+      <div class="card text-center py-4">
+        <div class="text-2xl mb-1">🍼</div>
+        <div class="text-xl font-serif text-ink-700">
+          {{ todayBottleMl }}<span class="text-xs font-normal text-ink-400 ml-0.5">ml</span>
         </div>
-        <div class="text-[10px] text-ink-400 mt-1.5">🍼 今日瓶喂</div>
+        <div class="text-xs text-ink-400">今日瓶喂</div>
       </div>
-      <div class="bg-white rounded-2xl ring-1 ring-inset ring-black/[0.04] shadow-[0_1px_3px_rgba(45,42,34,0.05)] px-1 pt-2.5 pb-2 text-center">
-        <div class="text-lg font-serif font-medium text-ink-700 leading-none">{{ lastFeeding || '—' }}</div>
-        <div class="text-[10px] text-ink-400 mt-1.5">⏱️ 上次喂养</div>
+      <div class="card text-center py-4">
+        <div class="text-2xl mb-1">⏱️</div>
+        <div class="text-xl font-serif text-ink-700">{{ lastFeeding || '—' }}</div>
+        <div class="text-xs text-ink-400">上次喂养</div>
       </div>
-      <div class="bg-white rounded-2xl ring-1 ring-inset ring-black/[0.04] shadow-[0_1px_3px_rgba(45,42,34,0.05)] px-1 pt-2.5 pb-2 text-center">
-        <div class="text-lg font-serif font-medium text-ink-700 leading-none">
-          {{ summary.diaper }}<span class="text-[10px] font-normal text-ink-400 ml-0.5">次</span>
+      <div class="card text-center py-4">
+        <div class="text-2xl mb-1">🧻</div>
+        <div class="text-xl font-serif text-ink-700">
+          {{ summary.diaper }}<span class="text-xs font-normal text-ink-400 ml-0.5">次</span>
         </div>
-        <div class="text-[10px] text-ink-400 mt-1.5">🧻 今日尿布</div>
+        <div class="text-xs text-ink-400">今日尿布</div>
       </div>
-      <div class="bg-white rounded-2xl ring-1 ring-inset ring-black/[0.04] shadow-[0_1px_3px_rgba(45,42,34,0.05)] px-1 pt-2.5 pb-2 text-center">
-        <div class="text-lg font-serif font-medium text-ink-700 leading-none">{{ lastDiaper || '—' }}</div>
-        <div class="text-[10px] text-ink-400 mt-1.5">🕐 上次尿布</div>
+      <div class="card text-center py-4">
+        <div class="text-2xl mb-1">🕐</div>
+        <div class="text-xl font-serif text-ink-700">{{ lastDiaper || '—' }}</div>
+        <div class="text-xs text-ink-400">上次尿布</div>
       </div>
     </div>
 
