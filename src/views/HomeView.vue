@@ -97,15 +97,24 @@ function changeBaby() {
   babyStore.switchBaby(next.id)
 }
 
+// 快速记录入口：浅色渐变瓷片 + 彩色图标
+const quickActions = [
+  { type: 'feeding', label: '喂养', icon: Milk, from: 'from-apricot-50', text: 'text-apricot-500' },
+  { type: 'diaper', label: '尿布', icon: BabyIcon, from: 'from-sage-50', text: 'text-sage-500' },
+  { type: 'weight', label: '体重', icon: Scale, from: 'from-dusk-50', text: 'text-dusk-400' },
+  { type: 'jaundice', label: '黄疸', icon: Sun, from: 'from-amber-50', text: 'text-amber-500' },
+  { type: 'milestone', label: '里程碑', icon: Star, from: 'from-cream-200', text: 'text-ink-500' }
+]
+
 function recordNow(type: string) {
   router.push(`/record/${type}`)
 }
 </script>
 
 <template>
-  <div class="px-5 pt-8 pb-4 flex flex-col min-h-full">
+  <div class="px-5 pt-6 pb-4 flex flex-col min-h-full">
     <!-- 顶部问候 -->
-    <div class="flex items-center justify-between mb-6">
+    <div class="flex items-center justify-between mb-4">
       <div>
         <p class="text-sm text-ink-400">{{ greeting }}，{{ userStore.user.name }}</p>
         <p class="text-xs text-ink-300 mt-0.5">记录者</p>
@@ -120,7 +129,7 @@ function recordNow(type: string) {
     </div>
 
     <!-- 宝宝信息卡 -->
-    <div v-if="currentBaby" class="bg-gradient-to-br from-apricot-200 via-cream-100 to-sage-100 rounded-3xl p-6 mb-5 relative overflow-hidden">
+    <div v-if="currentBaby" class="bg-gradient-to-br from-apricot-200 via-cream-100 to-sage-100 rounded-3xl p-5 mb-4 relative overflow-hidden">
       <div class="absolute -right-8 -top-8 w-32 h-32 bg-white/30 rounded-full blur-2xl"></div>
       <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-dusk-100/40 rounded-full blur-2xl"></div>
 
@@ -128,7 +137,7 @@ function recordNow(type: string) {
         <!-- 左：宝宝头像（加大，带白色描边） -->
         <button
           @click="router.push(`/baby/${currentBaby.id}/edit`)"
-          class="relative w-24 h-24 rounded-3xl bg-white/70 flex items-center justify-center text-6xl overflow-hidden group ring-4 ring-white/80 shadow-xl shadow-apricot-200/50"
+          class="relative w-20 h-20 rounded-2xl bg-white/70 flex items-center justify-center text-5xl overflow-hidden group ring-4 ring-white/80 shadow-xl shadow-apricot-200/50"
           aria-label="修改宝宝信息和头像"
         >
           <img v-if="currentBaby.avatar" :src="currentBaby.avatar" class="w-full h-full object-cover" alt="头像" />
@@ -185,67 +194,63 @@ function recordNow(type: string) {
     </div>
 
     <!-- 快速记录 -->
-    <div v-if="currentBaby" class="grid grid-cols-5 gap-2 mb-6">
+    <div v-if="currentBaby" class="grid grid-cols-5 gap-2 mb-5">
       <button
-        v-for="item in [
-          { type: 'feeding', label: '喂养', icon: Milk, color: 'bg-apricot-100', text: 'text-apricot-500' },
-          { type: 'diaper', label: '尿布', icon: BabyIcon, color: 'bg-sage-100', text: 'text-sage-500' },
-          { type: 'weight', label: '体重', icon: Scale, color: 'bg-dusk-100', text: 'text-dusk-400' },
-          { type: 'jaundice', label: '黄疸', icon: Sun, color: 'bg-amber-100', text: 'text-amber-500' },
-          { type: 'milestone', label: '里程碑', icon: Star, color: 'bg-cream-300', text: 'text-ink-500' }
-        ]"
+        v-for="item in quickActions"
         :key="item.type"
         @click="recordNow(item.type)"
-        class="card hover:shadow-md transition flex flex-col items-center gap-1.5 py-3"
+        :class="[
+          item.from,
+          'bg-gradient-to-b to-white rounded-2xl flex flex-col items-center justify-center gap-1 py-2',
+          'ring-1 ring-inset ring-black/[0.04] shadow-[0_2px_8px_-2px_rgba(45,42,34,0.08)]',
+          'hover:shadow-[0_8px_16px_-6px_rgba(45,42,34,0.18)] hover:-translate-y-0.5 active:scale-95',
+          'transition-all duration-200'
+        ]"
       >
-        <div :class="[item.color, 'w-9 h-9 rounded-xl flex items-center justify-center']">
+        <div class="w-8 h-8 rounded-[10px] bg-white/85 shadow-sm ring-1 ring-black/[0.03] flex items-center justify-center">
           <component :is="item.icon" :class="['w-4 h-4', item.text]" />
         </div>
-        <span class="text-[11px] text-ink-500">{{ item.label }}</span>
+        <span class="text-[11px] font-medium text-ink-600">{{ item.label }}</span>
       </button>
     </div>
 
     <!-- 今日统计 -->
-    <div v-if="currentBaby" class="grid grid-cols-4 gap-3 mb-6">
-      <div class="card text-center py-4">
-        <div class="text-2xl mb-1">🍼</div>
-        <div class="text-xl font-serif text-ink-700">
-          {{ todayBottleMl }}<span class="text-xs font-normal text-ink-400 ml-0.5">ml</span>
+    <div v-if="currentBaby" class="grid grid-cols-4 gap-2 mb-5">
+      <div class="bg-white rounded-2xl ring-1 ring-inset ring-black/[0.04] shadow-[0_1px_3px_rgba(45,42,34,0.05)] px-1 pt-2.5 pb-2 text-center">
+        <div class="text-lg font-serif font-medium text-ink-700 leading-none">
+          {{ todayBottleMl }}<span class="text-[10px] font-normal text-ink-400 ml-0.5">ml</span>
         </div>
-        <div class="text-xs text-ink-400">今日瓶喂</div>
+        <div class="text-[10px] text-ink-400 mt-1.5">🍼 今日瓶喂</div>
       </div>
-      <div class="card text-center py-4">
-        <div class="text-2xl mb-1">⏱️</div>
-        <div class="text-xl font-serif text-ink-700">{{ lastFeeding || '—' }}</div>
-        <div class="text-xs text-ink-400">上次喂养</div>
+      <div class="bg-white rounded-2xl ring-1 ring-inset ring-black/[0.04] shadow-[0_1px_3px_rgba(45,42,34,0.05)] px-1 pt-2.5 pb-2 text-center">
+        <div class="text-lg font-serif font-medium text-ink-700 leading-none">{{ lastFeeding || '—' }}</div>
+        <div class="text-[10px] text-ink-400 mt-1.5">⏱️ 上次喂养</div>
       </div>
-      <div class="card text-center py-4">
-        <div class="text-2xl mb-1">🧻</div>
-        <div class="text-xl font-serif text-ink-700">
-          {{ summary.diaper }}<span class="text-xs font-normal text-ink-400 ml-0.5">次</span>
+      <div class="bg-white rounded-2xl ring-1 ring-inset ring-black/[0.04] shadow-[0_1px_3px_rgba(45,42,34,0.05)] px-1 pt-2.5 pb-2 text-center">
+        <div class="text-lg font-serif font-medium text-ink-700 leading-none">
+          {{ summary.diaper }}<span class="text-[10px] font-normal text-ink-400 ml-0.5">次</span>
         </div>
-        <div class="text-xs text-ink-400">今日尿布</div>
+        <div class="text-[10px] text-ink-400 mt-1.5">🧻 今日尿布</div>
       </div>
-      <div class="card text-center py-4">
-        <div class="text-2xl mb-1">🕐</div>
-        <div class="text-xl font-serif text-ink-700">{{ lastDiaper || '—' }}</div>
-        <div class="text-xs text-ink-400">上次尿布</div>
+      <div class="bg-white rounded-2xl ring-1 ring-inset ring-black/[0.04] shadow-[0_1px_3px_rgba(45,42,34,0.05)] px-1 pt-2.5 pb-2 text-center">
+        <div class="text-lg font-serif font-medium text-ink-700 leading-none">{{ lastDiaper || '—' }}</div>
+        <div class="text-[10px] text-ink-400 mt-1.5">🕐 上次尿布</div>
       </div>
     </div>
 
     <!-- 最近记录 -->
     <div v-if="currentBaby && recordsStore.records.length > 0" class="card">
-      <div class="flex items-center justify-between mb-3">
+      <div class="flex items-center justify-between mb-2">
         <h3 class="heading-2">最近记录</h3>
         <button @click="router.push('/timeline')" class="text-xs text-apricot-500">
           查看全部 →
         </button>
       </div>
-      <div class="space-y-2">
+      <div class="space-y-1">
         <div
           v-for="r in recordsStore.forCurrentBaby().slice(0, 5)"
           :key="r.id"
-          class="flex items-center gap-3 py-2 border-b border-cream-200/60 last:border-0"
+          class="flex items-center gap-3 py-1.5 border-b border-cream-200/60 last:border-0"
         >
           <div class="text-xl">
             <span v-if="r.type === 'feeding'">🍼</span>
