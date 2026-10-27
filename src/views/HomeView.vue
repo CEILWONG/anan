@@ -99,11 +99,11 @@ function changeBaby() {
 
 // 快速记录入口：浅色渐变瓷片 + 彩色图标
 const quickActions = [
-  { type: 'feeding', label: '喂养', icon: Milk, from: 'from-apricot-50', text: 'text-apricot-500' },
-  { type: 'diaper', label: '尿布', icon: BabyIcon, from: 'from-sage-50', text: 'text-sage-500' },
-  { type: 'weight', label: '体重', icon: Scale, from: 'from-dusk-50', text: 'text-dusk-400' },
-  { type: 'jaundice', label: '黄疸', icon: Sun, from: 'from-amber-50', text: 'text-amber-500' },
-  { type: 'milestone', label: '里程碑', icon: Star, from: 'from-cream-200', text: 'text-ink-500' }
+  { type: 'feeding', label: '喂养', icon: Milk, from: 'from-apricot-100', text: 'text-apricot-500' },
+  { type: 'diaper', label: '尿布', icon: BabyIcon, from: 'from-sage-100', text: 'text-sage-500' },
+  { type: 'weight', label: '体重', icon: Scale, from: 'from-dusk-100', text: 'text-dusk-400' },
+  { type: 'jaundice', label: '黄疸', icon: Sun, from: 'from-amber-100', text: 'text-amber-500' },
+  { type: 'milestone', label: '里程碑', icon: Star, from: 'from-cream-300', text: 'text-ink-500' }
 ]
 
 function recordNow(type: string) {
